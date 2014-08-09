@@ -54,29 +54,15 @@ pub mod mock {
 
         /// Create a new, blank, response.
         pub fn new() -> Response {
-            with("")
-        }
-
-        /// Create a new response with the specified body.
-        pub fn with<B: BytesContainer>(body: B) -> Response {
             Response {
-                body: box MemReader::new(body.container_as_bytes().to_vec()) as Box<Reader>,
+                body: box MemReader::new(vec![]) as Box<Reader>,
                 headers: box HeaderCollection::new(),
                 status: None
             }
         }
 
         /// Create a new response with the specified body and status.
-        pub fn with_status(status: status::Status) -> Response {
-            Response {
-                body: box MemReader::new(vec![]) as Box<Reader>,
-                headers: box HeaderCollection::new(),
-                status: Some(status)
-            }
-        }
-
-        /// Create a new response with the specified body and status.
-        pub fn with_body_and_status<B: BytesContainer>(body: B, status: status::Status) -> Response {
+        pub fn with<B: BytesContainer>(status: status::Status, body: B) -> Response {
             Response {
                 body: box MemReader::new(body.container_as_bytes().to_vec()) as Box<Reader>,
                 headers: box HeaderCollection::new(),
@@ -110,6 +96,23 @@ mod test {
             assert_eq!(req.method, method::Put);
             assert_eq!(req.url.serialize().as_slice(), "http://www.google.com/");
             assert_eq!(req.body.as_slice(), "Hello Google!");
+        }
+    }
+
+    mod response {
+        use super::super::mock::response;
+        use http::status;
+
+        #[test] fn test_new() {
+            let mut res = response::new();
+            assert_eq!(res.status, None);
+            assert_eq!(res.body.read_to_string().unwrap().as_slice(), "");
+        }
+
+        #[test] fn test_with() {
+            let mut res = response::with(status::Ok, "Hello World!");
+            assert_eq!(res.status, Some(status::Ok));
+            assert_eq!(res.body.read_to_string().unwrap().as_slice(), "Hello World!");
         }
     }
 }
