@@ -2,7 +2,7 @@
 #![deny(missing_doc)]
 #![deny(warnings)]
 
-//! Crate comment goes here
+//! A set of constructors for mocking Iron objects.
 
 extern crate iron;
 extern crate http;
@@ -45,7 +45,44 @@ pub mod mock {
 
     /// Contains constructors for mocking Iron Responses.
     pub mod response {
+        use iron::Response;
+        use http::status;
+        use http::headers::response::HeaderCollection;
 
+        use std::path::BytesContainer;
+        use std::io::MemReader;
+
+        /// Create a new, blank, response.
+        pub fn new() -> Response {
+            with("")
+        }
+
+        /// Create a new response with the specified body.
+        pub fn with<B: BytesContainer>(body: B) -> Response {
+            Response {
+                body: box MemReader::new(body.container_as_bytes().to_vec()) as Box<Reader>,
+                headers: box HeaderCollection::new(),
+                status: None
+            }
+        }
+
+        /// Create a new response with the specified body and status.
+        pub fn with_status(status: status::Status) -> Response {
+            Response {
+                body: box MemReader::new(vec![]) as Box<Reader>,
+                headers: box HeaderCollection::new(),
+                status: Some(status)
+            }
+        }
+
+        /// Create a new response with the specified body and status.
+        pub fn with_body_and_status<B: BytesContainer>(body: B, status: status::Status) -> Response {
+            Response {
+                body: box MemReader::new(body.container_as_bytes().to_vec()) as Box<Reader>,
+                headers: box HeaderCollection::new(),
+                status: Some(status)
+            }
+        }
     }
 }
 
