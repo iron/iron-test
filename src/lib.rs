@@ -51,6 +51,29 @@ pub mod mock {
 
 #[cfg(test)]
 mod test {
+    mod request {
+        use super::super::mock::request;
+        use http::method;
+        use url::Url;
 
+        #[test] fn test_new() {
+            let req = request::new(method::Get, "localhost:3000");
+            assert_eq!(req.method, method::Get);
+            assert_eq!(req.url.serialize().as_slice(), "http://localhost:3000/");
+        }
+
+        #[test] fn test_at() {
+            let req = request::at(method::Post, Url::parse("http://www.google.com/").unwrap());
+            assert_eq!(req.method, method::Post);
+            assert_eq!(req.url.serialize().as_slice(), "http://www.google.com/");
+        }
+
+        #[test] fn test_at_with() {
+            let req = request::at_with(method::Put, Url::parse("http://www.google.com/").unwrap(), "Hello Google!");
+            assert_eq!(req.method, method::Put);
+            assert_eq!(req.url.serialize().as_slice(), "http://www.google.com/");
+            assert_eq!(req.body.as_slice(), "Hello Google!");
+        }
+    }
 }
 
