@@ -4,7 +4,7 @@ name = "iron-test"
 version = "0.0.1"
 authors = ["Jonathan Reem <jonathan.reem@gmail.com>"]
 
-[[lib]]
+[lib]
 
 name = "iron-test"
 path = "src/lib.rs"
