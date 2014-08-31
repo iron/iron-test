@@ -64,7 +64,7 @@ pub mod mock {
         /// Create a new response with the specified body and status.
         pub fn with<B: BytesContainer>(status: status::Status, body: B) -> Response {
             Response {
-                body: Some(box MemReader::new(body.container_as_bytes().to_vec()) as Box<Reader>),
+                body: Some(box MemReader::new(body.container_as_bytes().to_vec()) as Box<Reader + Send>),
                 headers: box HeaderCollection::new(),
                 status: Some(status),
                 extensions: TypeMap::new()
