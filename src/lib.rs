@@ -36,7 +36,7 @@ pub mod mock {
                 body: body.as_slice().to_string(),
                 method: method,
                 remote_addr: None,
-                headers: box HeaderCollection::new(),
+                headers: HeaderCollection::new(),
                 extensions: TypeMap::new()
             }
         }
@@ -55,7 +55,7 @@ pub mod mock {
         pub fn new() -> Response {
             Response {
                 body: None,
-                headers: box HeaderCollection::new(),
+                headers: HeaderCollection::new(),
                 status: None,
                 extensions: TypeMap::new()
             }
@@ -65,7 +65,7 @@ pub mod mock {
         pub fn with<B: BytesContainer>(status: status::Status, body: B) -> Response {
             Response {
                 body: Some(box MemReader::new(body.container_as_bytes().to_vec()) as Box<Reader + Send>),
-                headers: box HeaderCollection::new(),
+                headers: HeaderCollection::new(),
                 status: Some(status),
                 extensions: TypeMap::new()
             }
