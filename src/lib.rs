@@ -1,12 +1,21 @@
 #![license = "MIT"]
 #![deny(missing_doc)]
 #![deny(warnings)]
+#![feature(phase)]
 
 //! A set of constructors for mocking Iron objects.
 
 extern crate iron;
 extern crate http;
 extern crate url;
+extern crate uuid;
+
+#[phase(plugin, link)]
+extern crate log;
+
+pub use project_builder::ProjectBuilder;
+
+mod project_builder;
 
 /// Contains tooling for mocking various Iron objects.
 pub mod mock {

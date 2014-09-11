@@ -80,6 +80,31 @@ assert_eq!(res.status, Some(status::Ok));
 assert_eq!(res.body.read_to_string().unwrap().as_slice(), "Hello World!");
 ```
 
+### Creating project layout for tests
+
+Sometimes it is useful to have a predefined directory layout with specific files in
+it. You can easily create a simple project directory using a ProjectBuilder.
+
+Ex:
+
+```rust
+use iron_test::ProjectBuilder;
+
+#[test]
+fn test_a() {
+  let builder = ProjectBuilder::new("foo")
+    .file("index.html", "<html><h2>hello</h2></html>")
+    .file("main.css", "body{font-family: Verdana}");
+  builder.build();
+
+  // At this point you will have your project directory in:
+  // target/iron-integration-tests/test-<N>/foo/
+}
+```
+To access current project root, use `p.root()`.
+
+ProjectBuilder implements Drop and will clean up the project when it is dropped.
+
 ### Author
 
 Jonathan Reem
