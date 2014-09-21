@@ -1,7 +1,7 @@
-use std::io::fs;
+use std::io::fs::{mod, PathExtensions};
 use std::io::{mod, IoResult};
 use std::os;
-use std::path::{Path,BytesContainer};
+use std::path::{Path, BytesContainer};
 use std::vec::Vec;
 use std::fmt::Show;
 use uuid::Uuid;
