@@ -28,7 +28,9 @@ pub mod mock {
         /// Create a new request at `/` on the specified host with the
         /// specified method.
         pub fn new<S: Str>(method: method::Method, host: S) -> Request {
-            let url = Url::parse("http://".to_string().append(host.as_slice()).as_slice()).unwrap();
+            let mut url_str = "http://".to_string();
+            url_str.push_str(host.as_slice());
+            let url = Url::parse(url_str.as_slice()).unwrap();
             at(method, url)
         }
 
