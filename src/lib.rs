@@ -44,7 +44,7 @@ pub mod mock {
         pub fn at_with<S: Str>(method: method::Method, path: Url, body: S) -> Request {
             Request {
                 url: path,
-                body: body.as_slice().to_string(),
+                body: body.as_slice().as_bytes().to_vec(),
                 method: method,
                 remote_addr: None,
                 headers: HeaderCollection::new(),
