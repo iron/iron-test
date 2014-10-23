@@ -21,6 +21,7 @@ mod project_builder;
 pub mod mock {
     /// Contains constructors for mocking Iron Requests.
     pub mod request {
+        use std::path::BytesContainer;
         use iron::{Request, TypeMap, Url};
         use http::method;
         use http::headers::request::HeaderCollection;
@@ -41,10 +42,10 @@ pub mod mock {
 
         /// Create a new request at the specified Url with the specified method
         /// and the specified content as the body of the request.
-        pub fn at_with<S: Str>(method: method::Method, path: Url, body: S) -> Request {
+        pub fn at_with<B: BytesContainer>(method: method::Method, path: Url, body: B) -> Request {
             Request {
                 url: path,
-                body: body.as_slice().to_string(),
+                body: body.container_into_owned_bytes(),
                 method: method,
                 remote_addr: None,
                 headers: HeaderCollection::new(),
@@ -107,7 +108,7 @@ mod test {
             let req = request::at_with(method::Put, Url::parse("http://www.google.com/").unwrap(), "Hello Google!");
             assert_eq!(req.method, method::Put);
             assert_eq!(format!("{}", req.url).as_slice(), "http://www.google.com:80/");
-            assert_eq!(req.body.as_slice(), "Hello Google!");
+            assert_eq!(req.body.as_slice(), b"Hello Google!");
         }
     }
 
