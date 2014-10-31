@@ -77,7 +77,7 @@ impl ProjectBuilder {
     /// Creates the project layout, based on current state of the builder
     pub fn build(&self) -> &ProjectBuilder {
         match self.build_with_result() {
-            Err(e) => fail!(e),
+            Err(e) => panic!(e),
             _ => return self
         }
     }
