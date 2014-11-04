@@ -55,32 +55,18 @@ pub mod mock {
     }
 
     /// Contains constructors for mocking Iron Responses.
+    #[deprecated = "Replaced by Response modifiers and constructors in Iron itself."]
     pub mod response {
-        use iron::{Response, TypeMap};
-        use http::status;
-        use http::headers::response::HeaderCollection;
-
-        use std::path::BytesContainer;
-        use std::io::MemReader;
+        use iron::{Response, status};
 
         /// Create a new, blank, response.
         pub fn new() -> Response {
-            Response {
-                body: None,
-                headers: HeaderCollection::new(),
-                status: None,
-                extensions: TypeMap::new()
-            }
+            panic!("Use iron::Response::new() instead.");
         }
 
         /// Create a new response with the specified body and status.
-        pub fn with<B: BytesContainer>(status: status::Status, body: B) -> Response {
-            Response {
-                body: Some(box MemReader::new(body.container_as_bytes().to_vec()) as Box<Reader + Send>),
-                headers: HeaderCollection::new(),
-                status: Some(status),
-                extensions: TypeMap::new()
-            }
+        pub fn with<B>(_: status::Status, _: B) -> Response {
+            panic!("Use iron::Response::new() and modifiers instead.");
         }
     }
 }
@@ -109,23 +95,6 @@ mod test {
             assert_eq!(req.method, method::Put);
             assert_eq!(format!("{}", req.url).as_slice(), "http://www.google.com:80/");
             assert_eq!(req.body.as_slice(), b"Hello Google!");
-        }
-    }
-
-    mod response {
-        use super::super::mock::response;
-        use http::status;
-
-        #[test] fn test_new() {
-            let res = response::new();
-            assert_eq!(res.status, None);
-            assert!(res.body.is_none());
-        }
-
-        #[test] fn test_with() {
-            let res = response::with(status::Ok, "Hello World!");
-            assert_eq!(res.status, Some(status::Ok));
-            assert_eq!(res.body.unwrap().read_to_string().unwrap().as_slice(), "Hello World!");
         }
     }
 }
