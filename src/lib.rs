@@ -45,7 +45,7 @@ pub mod mock {
         pub fn at_with<B: BytesContainer>(method: method::Method, path: Url, body: B) -> Request {
             Request {
                 url: path,
-                body: body.container_into_owned_bytes(),
+                body: body.container_as_bytes().to_vec(),
                 method: method,
                 remote_addr: None,
                 headers: HeaderCollection::new(),
