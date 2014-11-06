@@ -8,8 +8,6 @@ use uuid::Uuid;
 
 static IRON_INTEGRATION_TEST_DIR : &'static str = "iron-integration-tests";
 
-local_data_key!(task_id: Uuid)
-
 #[deriving(PartialEq,Clone)]
 struct FileBuilder {
     path: Path,
@@ -53,12 +51,12 @@ impl ProjectBuilder {
     /// ProjectBuilder constructor
     /// Creates a directory with name
     pub fn new(name: &str) -> ProjectBuilder {
-        task_id.replace(Some(Uuid::new_v4()));
-        debug!("path setup: root={}", root().display());
-        root().rm_rf().unwrap();
+        let id = Uuid::new_v4();
+        debug!("path setup: root={}", root(id).display());
+        root(id).rm_rf().unwrap();
         ProjectBuilder {
             name: name.to_string(),
-            root: root().join(name),
+            root: root(id).join(name),
             files: vec!(),
         }
     }
@@ -127,9 +125,8 @@ impl<T, E: Show> ErrMsg<T> for Result<T, E> {
 
 // Current test root path.
 // Will be located in target/iron-integration-tests/test-<uuid>
-fn root() -> Path {
-    let my_id = *task_id.get().unwrap();
-    integration_tests_dir().join(format!("test-{}", my_id))
+fn root(id: Uuid) -> Path {
+    integration_tests_dir().join(format!("test-{}", id))
 }
 
 fn integration_tests_dir() -> Path {
