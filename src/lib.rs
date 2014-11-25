@@ -6,9 +6,10 @@
 //! A set of constructors for mocking Iron objects.
 
 extern crate iron;
-extern crate http;
+extern crate hyper;
 extern crate url;
 extern crate uuid;
+extern crate intovec;
 
 #[phase(plugin, link)]
 extern crate log;
@@ -21,10 +22,12 @@ mod project_builder;
 pub mod mock {
     /// Contains constructors for mocking Iron Requests.
     pub mod request {
-        use std::path::BytesContainer;
+        use intovec::IntoVec;
         use iron::{Request, TypeMap, Url};
-        use http::method;
-        use http::headers::request::HeaderCollection;
+        use hyper::method;
+        use hyper::header::Headers;
+
+        use std::io::net::ip::ToSocketAddr;
 
         /// Create a new request at `/` on the specified host with the
         /// specified method.
@@ -42,31 +45,15 @@ pub mod mock {
 
         /// Create a new request at the specified Url with the specified method
         /// and the specified content as the body of the request.
-        pub fn at_with<B: BytesContainer>(method: method::Method, path: Url, body: B) -> Request {
+        pub fn at_with<I: IntoVec<u8>>(method: method::Method, path: Url, body: I) -> Request {
             Request {
                 url: path,
-                body: body.container_as_bytes().to_vec(),
+                body: body.into_vec(),
                 method: method,
-                remote_addr: None,
-                headers: HeaderCollection::new(),
+                remote_addr: "127.0.0.1".to_socket_addr().unwrap(),
+                headers: Headers::new(),
                 extensions: TypeMap::new()
             }
-        }
-    }
-
-    /// Contains constructors for mocking Iron Responses.
-    #[deprecated = "Replaced by Response modifiers and constructors in Iron itself."]
-    pub mod response {
-        use iron::{Response, status};
-
-        /// Create a new, blank, response.
-        pub fn new() -> Response {
-            panic!("Use iron::Response::new() instead.");
-        }
-
-        /// Create a new response with the specified body and status.
-        pub fn with<B>(_: status::Status, _: B) -> Response {
-            panic!("Use iron::Response::new() and modifiers instead.");
         }
     }
 }
