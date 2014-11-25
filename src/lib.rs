@@ -50,7 +50,7 @@ pub mod mock {
                 url: path,
                 body: body.into_vec(),
                 method: method,
-                remote_addr: "127.0.0.1".to_socket_addr().unwrap(),
+                remote_addr: "127.0.0.1:3000".to_socket_addr().unwrap(),
                 headers: Headers::new(),
                 extensions: TypeMap::new()
             }
@@ -62,7 +62,7 @@ pub mod mock {
 mod test {
     mod request {
         use super::super::mock::request;
-        use http::method;
+        use iron::method;
         use iron::Url;
 
         #[test] fn test_new() {
