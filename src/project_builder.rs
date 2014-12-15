@@ -52,8 +52,8 @@ impl ProjectBuilder {
     /// Creates a directory with name
     pub fn new(name: &str) -> ProjectBuilder {
         let id = Uuid::new_v4();
-        debug!("path setup: root={}", root(id).display());
-        root(id).rm_rf().unwrap();
+        debug!("path setup: root={}", root(id.clone()).display());
+        root(id.clone()).rm_rf().unwrap();
         ProjectBuilder {
             name: name.to_string(),
             root: root(id).join(name),
