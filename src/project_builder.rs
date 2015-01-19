@@ -1,5 +1,5 @@
-use std::io::fs::{mod, PathExtensions};
-use std::io::{mod, IoResult};
+use std::io::fs::{self, PathExtensions};
+use std::io::{self, IoResult};
 use std::os;
 use std::path::{Path, BytesContainer};
 use std::vec::Vec;
@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 static IRON_INTEGRATION_TEST_DIR : &'static str = "iron-integration-tests";
 
-#[deriving(PartialEq,Clone)]
+#[derive(Show, PartialEq, Clone)]
 struct FileBuilder {
     path: Path,
     body: String
@@ -40,7 +40,7 @@ impl FileBuilder {
 
 
 /// ProjectBuilder allows to incrementally build a project layout to be used in tests
-#[deriving(PartialEq,Clone)]
+#[derive(Show, PartialEq, Clone)]
 pub struct ProjectBuilder {
     name: String,
     root: Path,
@@ -118,7 +118,7 @@ impl<T, E: Show> ErrMsg<T> for Result<T, E> {
     fn with_err_msg(self, val: String) -> Result<T, String> {
         match self {
             Ok(val) => Ok(val),
-            Err(err) => Err(format!("{}; original={}", val, err))
+            Err(err) => Err(format!("{}; original={:?}", val, err))
         }
     }
 }

@@ -1,6 +1,6 @@
+#![allow(unstable)]
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![feature(phase)]
 
 //! A set of constructors for mocking Iron objects.
 
@@ -10,7 +10,7 @@ extern crate url;
 extern crate uuid;
 extern crate intovec;
 
-#[phase(plugin, link)]
+#[macro_use]
 extern crate log;
 
 pub use project_builder::ProjectBuilder;
