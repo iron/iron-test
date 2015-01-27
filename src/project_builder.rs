@@ -3,12 +3,12 @@ use std::io::{self, IoResult};
 use std::os;
 use std::path::{Path, BytesContainer};
 use std::vec::Vec;
-use std::fmt::Show;
+use std::fmt::Debug;
 use uuid::Uuid;
 
 static IRON_INTEGRATION_TEST_DIR : &'static str = "iron-integration-tests";
 
-#[derive(Show, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 struct FileBuilder {
     path: Path,
     body: String
@@ -40,7 +40,7 @@ impl FileBuilder {
 
 
 /// ProjectBuilder allows to incrementally build a project layout to be used in tests
-#[derive(Show, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ProjectBuilder {
     name: String,
     root: Path,
@@ -114,7 +114,7 @@ trait ErrMsg<T> {
     fn with_err_msg(self, val: String) -> Result<T, String>;
 }
 
-impl<T, E: Show> ErrMsg<T> for Result<T, E> {
+impl<T, E: Debug> ErrMsg<T> for Result<T, E> {
     fn with_err_msg(self, val: String) -> Result<T, String> {
         match self {
             Ok(val) => Ok(val),

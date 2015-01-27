@@ -49,6 +49,7 @@ pub mod mock {
                 url: path,
                 body: body.into_vec(),
                 method: method,
+                local_addr: "127.0.0.1:8080".to_socket_addr().unwrap(),
                 remote_addr: "127.0.0.1:3000".to_socket_addr().unwrap(),
                 headers: Headers::new(),
                 extensions: TypeMap::new()
