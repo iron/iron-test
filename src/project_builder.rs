@@ -1,8 +1,8 @@
-use std::io::fs::{self, PathExtensions};
-use std::io::{self, IoResult};
-use std::os;
-use std::path::{Path, BytesContainer};
-use std::vec::Vec;
+use std::old_io::fs::{self, PathExtensions};
+use std::old_io::IoResult;
+use std::old_io as io;
+use std::env;
+use std::old_path::{Path, BytesContainer};
 use std::fmt::Debug;
 use uuid::Uuid;
 
@@ -11,13 +11,13 @@ static IRON_INTEGRATION_TEST_DIR : &'static str = "iron-integration-tests";
 #[derive(Debug, PartialEq, Clone)]
 struct FileBuilder {
     path: Path,
-    body: String
+    body: Vec<u8>
 }
 
 impl FileBuilder {
     /// creates new instance of ProjectBuilder
-    pub fn new(path: Path, body: &str) -> FileBuilder {
-        FileBuilder { path: path, body: body.to_string() }
+    pub fn new(path: Path, body: &[u8]) -> FileBuilder {
+        FileBuilder { path: path, body: body.to_vec() }
     }
 
     fn mk(&self) -> Result<(), String> {
@@ -28,7 +28,7 @@ impl FileBuilder {
                 .with_err_msg(format!("Could not create file; path={}",
                                       self.path.display())));
 
-        file.write_str(self.body.as_slice())
+        file.write_all(self.body.as_slice())
             .with_err_msg(format!("Could not write to file; path={}",
                                   self.path.display()))
     }
@@ -39,7 +39,10 @@ impl FileBuilder {
 }
 
 
-/// ProjectBuilder allows to incrementally build a project layout to be used in tests
+/// An RAII guard that controls a temporary directory of test files.
+///
+/// It is also a builder and is used to build up the temporary files,
+/// which are then deleted on drop.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ProjectBuilder {
     name: String,
@@ -48,41 +51,41 @@ pub struct ProjectBuilder {
 }
 
 impl ProjectBuilder {
-    /// ProjectBuilder constructor
-    /// Creates a directory with name
+    /// Create a ProjectBuilder that will manage a new temporary directory
+    /// making use of the current name.
     pub fn new(name: &str) -> ProjectBuilder {
         let id = Uuid::new_v4();
-        debug!("path setup: root={}", root(id.clone()).display());
-        root(id.clone()).rm_rf().unwrap();
+        let path = root(id);
+
+        // Clear out the temp directory.
+        path.rm_rf().unwrap();
+
         ProjectBuilder {
             name: name.to_string(),
-            root: root(id).join(name),
+            root: path.join(name),
             files: vec!(),
         }
     }
 
-    /// Root of the project layout
-    pub fn root(&self) -> Path {
-        self.root.clone()
+    /// Get the root path of the temporary directory.
+    pub fn root(&self) -> &Path {
+        &self.root
     }
 
-    /// Adds new file to builder with given path and body
-    pub fn file<B: BytesContainer, S: Str>(mut self, path: B, body: S) -> ProjectBuilder {
-        self.files.push(FileBuilder::new(self.root.join(path), body.as_slice()));
+    /// Add a new file to the temporary directory with the given contents.
+    pub fn file<B, C>(mut self, path: B, body: C) -> ProjectBuilder
+    where B: BytesContainer, C: BytesContainer {
+        self.files.push(FileBuilder::new(self.root.join(path), body.container_as_bytes()));
         self
     }
 
     /// Creates the project layout, based on current state of the builder
     pub fn build(&self) -> &ProjectBuilder {
-        match self.build_with_result() {
-            Err(e) => panic!(e),
-            _ => return self
-        }
+        self.build_with_result().map(|_| self).unwrap()
     }
 
     /// Creates the project layout, based on current state of the builder
     pub fn build_with_result(&self) -> Result<(), String> {
-
         for file in self.files.iter() {
             try!(file.mk());
         }
@@ -100,8 +103,8 @@ impl Drop for ProjectBuilder {
     }
 }
 
-/// recursively creates the directory with all subdirectories
-pub fn mkdir_recursive(path: &Path) -> Result<(), String> {
+// Recursively creates the directory with all subdirectories
+fn mkdir_recursive(path: &Path) -> Result<(), String> {
     fs::mkdir_recursive(path, io::USER_DIR)
         .with_err_msg(format!("could not create directory; path={}",
                               path.display()))
@@ -130,7 +133,9 @@ fn root(id: Uuid) -> Path {
 }
 
 fn integration_tests_dir() -> Path {
-    os::self_exe_path().unwrap().join(IRON_INTEGRATION_TEST_DIR)
+    env::current_exe()
+        .map(|mut p| { p.pop(); p.join(IRON_INTEGRATION_TEST_DIR) })
+        .unwrap()
 }
 
 
@@ -149,3 +154,4 @@ impl PathExt for Path {
         }
     }
 }
+

@@ -1,6 +1,6 @@
-#![allow(unstable)]
 #![deny(missing_docs)]
 #![deny(warnings)]
+#![feature(core, io, env, path)]
 
 //! A set of constructors for mocking Iron objects.
 
@@ -8,7 +8,6 @@ extern crate iron;
 extern crate hyper;
 extern crate url;
 extern crate uuid;
-extern crate intovec;
 
 #[macro_use]
 extern crate log;
@@ -21,37 +20,40 @@ mod project_builder;
 pub mod mock {
     /// Contains constructors for mocking Iron Requests.
     pub mod request {
-        use intovec::IntoVec;
-        use iron::{Request, TypeMap, Url};
-        use hyper::method;
-        use hyper::header::Headers;
+        use iron::{Request, TypeMap, Headers, Url};
+        use iron::request::Body;
+        use iron::{method, headers};
 
-        use std::io::net::ip::ToSocketAddr;
+        use hyper::http::HttpReader;
 
-        /// Create a new request at `/` on the specified host with the
-        /// specified method.
-        pub fn new<S: Str>(method: method::Method, host: S) -> Request {
-            let mut url_str = "http://".to_string();
-            url_str.push_str(host.as_slice());
-            let url = Url::parse(url_str.as_slice()).unwrap();
-            at(method, url)
-        }
+        use std::old_io::net::ip::ToSocketAddr;
 
-        /// Create a new request at the specific Url with the specified method.
-        pub fn at(method: method::Method, path: Url) -> Request {
-            at_with(method, path, "")
-        }
+        /// Create a new mock Request with the given method, url, and data.
+        pub fn new<'a, R>(method: method::Method, path: Url,
+                          data: &'a mut R) -> Request<'a>
+        where R: Reader {
+            let reader = HttpReader::EofReader(data as &'a mut Reader);
+            let addr = "127.0.0.1:3000".to_socket_addr().unwrap();
 
-        /// Create a new request at the specified Url with the specified method
-        /// and the specified content as the body of the request.
-        pub fn at_with<I: IntoVec<u8>>(method: method::Method, path: Url, body: I) -> Request {
+            let mut headers = Headers::new();
+            let host = Url::parse("http://127.0.0.1:3000").unwrap()
+                .into_generic_url()
+                .serialize_host().unwrap();
+
+            headers.set(headers::Host {
+                hostname: host,
+                port: Some(3000),
+            });
+
+            headers.set(headers::UserAgent("iron-test".to_string()));
+
             Request {
-                url: path,
-                body: body.into_vec(),
                 method: method,
-                local_addr: "127.0.0.1:8080".to_socket_addr().unwrap(),
-                remote_addr: "127.0.0.1:3000".to_socket_addr().unwrap(),
-                headers: Headers::new(),
+                url: path,
+                body: Body::new(reader),
+                local_addr: addr.clone(),
+                remote_addr: addr,
+                headers: headers,
                 extensions: TypeMap::new()
             }
         }
