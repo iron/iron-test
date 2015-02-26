@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![feature(core, io, env, path)]
+#![feature(core, env)]
 
 //! A set of constructors for mocking Iron objects.
 
