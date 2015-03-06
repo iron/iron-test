@@ -1,23 +1,26 @@
-use std::old_io::fs::{self, PathExtensions};
-use std::old_io::IoResult;
-use std::old_io as io;
+use std::fs;
+use std::fs::PathExt;
+use std::io::{self, Write};
 use std::env;
-use std::old_path::{Path, BytesContainer};
+use std::path::{Path, PathBuf, AsPath};
 use std::fmt::Debug;
 use uuid::Uuid;
+use std::ffi::IntoBytes;
+use std::sync::{StaticMutex, MUTEX_INIT};
 
 static IRON_INTEGRATION_TEST_DIR : &'static str = "iron-integration-tests";
+static FILE_OP_LOCK: StaticMutex = MUTEX_INIT;
 
 #[derive(Debug, PartialEq, Clone)]
 struct FileBuilder {
-    path: Path,
+    path: PathBuf,
     body: Vec<u8>
 }
 
 impl FileBuilder {
-    /// creates new instance of ProjectBuilder
-    pub fn new(path: Path, body: &[u8]) -> FileBuilder {
-        FileBuilder { path: path, body: body.to_vec() }
+    /// creates new instance of FileBuilder
+    pub fn new<P: AsPath, B: IntoBytes>(path: P, body: B) -> FileBuilder {
+        FileBuilder { path: path.as_path().to_path_buf(), body: body.into_bytes() }
     }
 
     fn mk(&self) -> Result<(), String> {
@@ -33,8 +36,9 @@ impl FileBuilder {
                                   self.path.display()))
     }
 
-    fn dirname(&self) -> Path {
-        Path::new(self.path.dirname())
+    // FIXME: Panics if there's no parent
+    fn dirname(&self) -> &Path {
+        &self.path.parent().expect("parent directory")
     }
 }
 
@@ -46,7 +50,7 @@ impl FileBuilder {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ProjectBuilder {
     name: String,
-    root: Path,
+    root: PathBuf,
     files: Vec<FileBuilder>,
 }
 
@@ -73,9 +77,9 @@ impl ProjectBuilder {
     }
 
     /// Add a new file to the temporary directory with the given contents.
-    pub fn file<B, C>(mut self, path: B, body: C) -> ProjectBuilder
-    where B: BytesContainer, C: BytesContainer {
-        self.files.push(FileBuilder::new(self.root.join(path), body.container_as_bytes()));
+    pub fn file<P, B>(mut self, path: P, body: B) -> ProjectBuilder
+    where P: AsPath, B: IntoBytes {
+        self.files.push(FileBuilder::new(self.root.join(&path), body));
         self
     }
 
@@ -96,16 +100,18 @@ impl ProjectBuilder {
 
 impl Drop for ProjectBuilder {
     fn drop(&mut self) {
-        match self.root().dir_path().rm_rf() {
-            Ok(_) => debug!("Successfully cleaned up the test directory; path = {}", self.root().dir_path().display()),
-            Err(e) => debug!("Failed to cleanup the test directory; path = {}; {}", self.root().dir_path().display(), e)
+        match self.root().parent().map(BuilderPathExt::rm_rf) {
+            Some(Ok(_)) => debug!("Successfully cleaned up the test directory; path = {:?}", self.root().parent().unwrap()),
+            Some(Err(e)) => debug!("Failed to cleanup the test directory; path = {:?}; {}", self.root().parent().unwrap(), e),
+            None => debug!("Failed to cleanup the test directory; no parent")
         }
     }
 }
 
 // Recursively creates the directory with all subdirectories
 fn mkdir_recursive(path: &Path) -> Result<(), String> {
-    fs::mkdir_recursive(path, io::USER_DIR)
+    let _l = FILE_OP_LOCK.lock().unwrap();
+    fs::create_dir_all(path)
         .with_err_msg(format!("could not create directory; path={}",
                               path.display()))
 }
@@ -128,11 +134,11 @@ impl<T, E: Debug> ErrMsg<T> for Result<T, E> {
 
 // Current test root path.
 // Will be located in target/iron-integration-tests/test-<uuid>
-fn root(id: Uuid) -> Path {
-    integration_tests_dir().join(format!("test-{}", id))
+fn root(id: Uuid) -> PathBuf {
+    integration_tests_dir().join(&format!("test-{}", id))
 }
 
-fn integration_tests_dir() -> Path {
+fn integration_tests_dir() -> PathBuf {
     env::current_exe()
         .map(|mut p| { p.pop(); p.join(IRON_INTEGRATION_TEST_DIR) })
         .unwrap()
@@ -140,15 +146,16 @@ fn integration_tests_dir() -> Path {
 
 
 /// Convenience methods on Path
-pub trait PathExt {
+pub trait BuilderPathExt {
     /// Deletes directory in Path recursively
-    fn rm_rf(&self) -> IoResult<()>;
+    fn rm_rf(&self) -> io::Result<()>;
 }
 
-impl PathExt for Path {
-    fn rm_rf(&self) -> IoResult<()> {
+impl BuilderPathExt for Path {
+    fn rm_rf(&self) -> io::Result<()> {
+        let _l = FILE_OP_LOCK.lock().unwrap();
         if self.exists() {
-            fs::rmdir_recursive(self)
+            fs::remove_dir_all(self)
         } else {
             Ok(())
         }
