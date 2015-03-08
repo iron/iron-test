@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![feature(core, io, env, path)]
+#![feature(core, io, path, std_misc, net, path_ext)]
 
 //! A set of constructors for mocking Iron objects.
 
@@ -26,14 +26,15 @@ pub mod mock {
 
         use hyper::http::HttpReader;
 
-        use std::old_io::net::ip::ToSocketAddr;
+        use std::io::Read;
+        use std::net::SocketAddr;
 
         /// Create a new mock Request with the given method, url, and data.
         pub fn new<'a, R>(method: method::Method, path: Url,
                           data: &'a mut R) -> Request<'a>
-        where R: Reader {
-            let reader = HttpReader::EofReader(data as &'a mut Reader);
-            let addr = "127.0.0.1:3000".to_socket_addr().unwrap();
+        where R: Read {
+            let reader = HttpReader::EofReader(data as &'a mut Read);
+            let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
 
             let mut headers = Headers::new();
             let host = Url::parse("http://127.0.0.1:3000").unwrap()
@@ -66,24 +67,17 @@ mod test {
         use super::super::mock::request;
         use iron::method;
         use iron::Url;
+        use std::io::{Read,Cursor};
 
-        #[test] fn test_new() {
-            let req = request::new(method::Get, "localhost:3000");
+        #[test] fn test_request() {
+            let ref mut data = Cursor::new("Hello Google!".as_bytes());
+            let mut req = request::new(method::Get, Url::parse("http://localhost:3000").unwrap(), data);
             assert_eq!(req.method, method::Get);
             assert_eq!(format!("{}", req.url).as_slice(), "http://localhost:3000/");
-        }
 
-        #[test] fn test_at() {
-            let req = request::at(method::Post, Url::parse("http://www.google.com/").unwrap());
-            assert_eq!(req.method, method::Post);
-            assert_eq!(format!("{}", req.url).as_slice(), "http://www.google.com:80/");
-        }
-
-        #[test] fn test_at_with() {
-            let req = request::at_with(method::Put, Url::parse("http://www.google.com/").unwrap(), "Hello Google!");
-            assert_eq!(req.method, method::Put);
-            assert_eq!(format!("{}", req.url).as_slice(), "http://www.google.com:80/");
-            assert_eq!(req.body.as_slice(), b"Hello Google!");
+            let mut body_buf = Vec::new();
+            req.body.read_to_end(&mut body_buf).ok().unwrap();
+            assert_eq!(&*body_buf, b"Hello Google!");
         }
     }
 }
