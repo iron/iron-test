@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![feature(core, std_misc, net, path_ext)]
+#![feature(std_misc, path_ext)]
 
 //! A set of constructors for mocking Iron objects.
 
@@ -18,6 +18,46 @@ mod project_builder;
 
 /// Contains tooling for mocking various Iron objects.
 pub mod mock {
+    use hyper::net::NetworkStream;
+    use std::net::SocketAddr;
+    use std::io::{Read, Write, Result};
+    use std::any::Any;
+
+    /// A mock network stream
+    #[derive(Clone)]
+    pub struct MockStream<T> {
+        data: T
+    }
+
+    impl<T> MockStream<T> {
+        /// Create a new mock stream that reads from the given data
+        pub fn new(data: T) -> MockStream<T> {
+            MockStream { data: data }
+        }
+    }
+
+    impl<T: Send + Read + Write + Clone + Any> NetworkStream for MockStream<T> {
+        fn peer_addr(&mut self) -> Result<SocketAddr> {
+            Ok("127.0.0.1:3000".parse().unwrap())
+        }
+    }
+
+    impl<T: Read> Read for MockStream<T> {
+        fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+            self.data.read(buf)
+        }
+    }
+
+    impl<T: Write> Write for MockStream<T> {
+        fn write(&mut self, buf: &[u8]) -> Result<usize> {
+            self.data.write(buf)
+        }
+
+        fn flush(&mut self) -> Result<()> {
+            self.data.flush()
+        }
+    }
+
     /// Contains constructors for mocking Iron Requests.
     pub mod request {
         use iron::{Request, TypeMap, Headers, Url};
@@ -25,15 +65,15 @@ pub mod mock {
         use iron::{method, headers};
 
         use hyper::http::HttpReader;
+        use hyper::buffer::BufReader;
+        use hyper::net::NetworkStream;
 
-        use std::io::Read;
         use std::net::SocketAddr;
 
         /// Create a new mock Request with the given method, url, and data.
-        pub fn new<'a, R>(method: method::Method, path: Url,
-                          data: &'a mut R) -> Request<'a>
-        where R: Read {
-            let reader = HttpReader::EofReader(data as &'a mut Read);
+        pub fn new<'a, 'b>(method: method::Method, path: Url,
+                           reader: &'a mut BufReader<&'b mut NetworkStream>) -> Request<'a, 'b> {
+            let reader = HttpReader::EofReader(reader);
             let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
 
             let mut headers = Headers::new();
@@ -65,15 +105,21 @@ pub mod mock {
 mod test {
     mod request {
         use super::super::mock::request;
+        use super::super::mock::MockStream;
         use iron::method;
         use iron::Url;
-        use std::io::{Read,Cursor};
+        use std::io::{Read, Cursor};
+        use hyper::buffer::BufReader;
+        use hyper::net::NetworkStream;
 
         #[test] fn test_request() {
-            let ref mut data = Cursor::new("Hello Google!".as_bytes());
-            let mut req = request::new(method::Get, Url::parse("http://localhost:3000").unwrap(), data);
+            let data = Cursor::new("Hello Google!".to_string().into_bytes());
+            let mut stream = MockStream::new(data);
+            let mut reader = BufReader::new(&mut stream as &mut NetworkStream);
+            let mut req = request::new(method::Get, Url::parse("http://localhost:3000").unwrap(),
+                                       &mut reader);
             assert_eq!(req.method, method::Get);
-            assert_eq!(format!("{}", req.url).as_slice(), "http://localhost:3000/");
+            assert_eq!(&format!("{}", req.url)[..], "http://localhost:3000/");
 
             let mut body_buf = Vec::new();
             req.body.read_to_end(&mut body_buf).ok().unwrap();
@@ -81,4 +127,3 @@ mod test {
         }
     }
 }
-
