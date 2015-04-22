@@ -2,10 +2,9 @@ use std::fs;
 use std::fs::PathExt;
 use std::io::{self, Write};
 use std::env;
-use std::path::{Path, PathBuf, AsPath};
+use std::path::{Path, PathBuf};
 use std::fmt::Debug;
 use uuid::Uuid;
-use std::ffi::IntoBytes;
 use std::sync::{StaticMutex, MUTEX_INIT};
 
 static IRON_INTEGRATION_TEST_DIR : &'static str = "iron-integration-tests";
@@ -19,8 +18,8 @@ struct FileBuilder {
 
 impl FileBuilder {
     /// creates new instance of FileBuilder
-    pub fn new<P: AsPath, B: IntoBytes>(path: P, body: B) -> FileBuilder {
-        FileBuilder { path: path.as_path().to_path_buf(), body: body.into_bytes() }
+    pub fn new<P: AsRef<Path>, B: Into<Vec<u8>>>(path: P, body: B) -> FileBuilder {
+        FileBuilder { path: path.as_ref().to_path_buf(), body: body.into() }
     }
 
     fn mk(&self) -> Result<(), String> {
@@ -31,7 +30,7 @@ impl FileBuilder {
                 .with_err_msg(format!("Could not create file; path={}",
                                       self.path.display())));
 
-        file.write_all(self.body.as_slice())
+        file.write_all(&self.body)
             .with_err_msg(format!("Could not write to file; path={}",
                                   self.path.display()))
     }
@@ -78,7 +77,7 @@ impl ProjectBuilder {
 
     /// Add a new file to the temporary directory with the given contents.
     pub fn file<P, B>(mut self, path: P, body: B) -> ProjectBuilder
-    where P: AsPath, B: IntoBytes {
+    where P: AsRef<Path>, B: Into<Vec<u8>> {
         self.files.push(FileBuilder::new(self.root.join(&path), body));
         self
     }
@@ -161,4 +160,3 @@ impl BuilderPathExt for Path {
         }
     }
 }
-
