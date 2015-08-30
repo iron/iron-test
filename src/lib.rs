@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![feature(std_misc, path_ext)]
+#![feature(static_mutex, path_ext)]
 
 //! A set of constructors for mocking Iron objects.
 
@@ -64,7 +64,7 @@ pub mod mock {
         use iron::request::Body;
         use iron::{method, headers};
 
-        use hyper::http::HttpReader;
+        use hyper::http::h1::HttpReader;
         use hyper::buffer::BufReader;
         use hyper::net::NetworkStream;
 
