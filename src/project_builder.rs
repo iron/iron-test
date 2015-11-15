@@ -45,7 +45,7 @@ impl FileBuilder {
 ///
 /// It is also a builder and is used to build up the temporary files,
 /// which are then deleted on drop.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct ProjectBuilder {
     name: String,
     root: PathBuf,
@@ -93,6 +93,14 @@ impl ProjectBuilder {
         }
 
         Ok(())
+    }
+}
+
+impl PartialEq for ProjectBuilder {
+    fn eq(&self, other: &ProjectBuilder) -> bool {
+        self.name.eq(&other.name) &&
+            self.root.eq(&other.root) &&
+            self.files.eq(&other.files)
     }
 }
 
