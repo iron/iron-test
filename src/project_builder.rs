@@ -1,5 +1,4 @@
 use std::fs;
-use std::fs::PathExt;
 use std::io::{self, Write};
 use std::env;
 use std::path::{Path, PathBuf};
@@ -153,7 +152,7 @@ pub trait BuilderPathExt {
 impl BuilderPathExt for Path {
     fn rm_rf(&self) -> io::Result<()> {
         let _l = FILE_OP_LOCK.lock().unwrap();
-        if self.exists() {
+        if let Ok(_) = fs::metadata(self) {
             fs::remove_dir_all(self)
         } else {
             Ok(())
