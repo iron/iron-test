@@ -1,14 +1,12 @@
 use std::fs;
-use std::fs::PathExt;
 use std::io::{self, Write};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::fmt::Debug;
 use uuid::Uuid;
-use std::sync::{StaticMutex, MUTEX_INIT};
+use std::sync::{Mutex, Arc};
 
 static IRON_INTEGRATION_TEST_DIR : &'static str = "iron-integration-tests";
-static FILE_OP_LOCK: StaticMutex = MUTEX_INIT;
 
 #[derive(Debug, PartialEq, Clone)]
 struct FileBuilder {
@@ -46,11 +44,12 @@ impl FileBuilder {
 ///
 /// It is also a builder and is used to build up the temporary files,
 /// which are then deleted on drop.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct ProjectBuilder {
     name: String,
     root: PathBuf,
     files: Vec<FileBuilder>,
+    lock: Arc<Mutex<()>>,
 }
 
 impl ProjectBuilder {
@@ -67,6 +66,7 @@ impl ProjectBuilder {
             name: name.to_string(),
             root: path.join(name),
             files: vec!(),
+            lock: Arc::new(Mutex::new(())),
         }
     }
 
@@ -89,6 +89,7 @@ impl ProjectBuilder {
 
     /// Creates the project layout, based on current state of the builder
     pub fn build_with_result(&self) -> Result<(), String> {
+        let _lock = self.lock.lock().unwrap();
         for file in self.files.iter() {
             try!(file.mk());
         }
@@ -97,8 +98,17 @@ impl ProjectBuilder {
     }
 }
 
+impl PartialEq for ProjectBuilder {
+    fn eq(&self, other: &ProjectBuilder) -> bool {
+        self.name.eq(&other.name) &&
+            self.root.eq(&other.root) &&
+            self.files.eq(&other.files)
+    }
+}
+
 impl Drop for ProjectBuilder {
     fn drop(&mut self) {
+        let _lock = self.lock.lock().unwrap();
         match self.root().parent().map(BuilderPathExt::rm_rf) {
             Some(Ok(_)) => debug!("Successfully cleaned up the test directory; path = {:?}", self.root().parent().unwrap()),
             Some(Err(e)) => debug!("Failed to cleanup the test directory; path = {:?}; {}", self.root().parent().unwrap(), e),
@@ -109,7 +119,6 @@ impl Drop for ProjectBuilder {
 
 // Recursively creates the directory with all subdirectories
 fn mkdir_recursive(path: &Path) -> Result<(), String> {
-    let _l = FILE_OP_LOCK.lock().unwrap();
     fs::create_dir_all(path)
         .with_err_msg(format!("could not create directory; path={}",
                               path.display()))
@@ -152,8 +161,7 @@ pub trait BuilderPathExt {
 
 impl BuilderPathExt for Path {
     fn rm_rf(&self) -> io::Result<()> {
-        let _l = FILE_OP_LOCK.lock().unwrap();
-        if self.exists() {
+        if let Ok(_) = fs::metadata(self) {
             fs::remove_dir_all(self)
         } else {
             Ok(())
