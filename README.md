@@ -1,84 +1,66 @@
 # Iron Test
 
-> A suite of constructors for Iron Request's and Response's for testing.
+> A suite of convenience methods and constructors for making requests to Iron Handlers.
 
 ## Example
 
 ```rust
-#[test] fn test_new() {
-    let req = request::new(method::Get, "localhost:3000");
-    assert_eq!(req.method, method::Get);
-    assert_eq!(req.url.serialize().as_slice(), "http://localhost:3000/");
+extern crate iron;
+extern crate iron_test;
+
+use iron::prelude::*;
+use iron::{Handler, Headers, status};
+use iron::response::ResponseBody;
+use iron_test::mock::request;
+
+struct HelloWorldHandler;
+
+impl Handler for HelloWorldHandler {
+  fn handle(&self, _: &mut Request) -> IronResult<Response> {
+    Ok(Response::with((status::Ok, "Hello, world!")))
+  }
+}
+
+#[test]
+fn test_hello_world() {
+    let response = request::get("http://localhost:3000/hello", Headers::new(), HelloWorldHandler).unwrap();
+    let mut result_body = Vec::new();
+
+    {
+      let mut response_body = ResponseBody::new(&mut result_body);
+      match response.body {
+        Some(mut body) => body.write_body(&mut response_body).ok(),
+        None => None,
+      };
+    }
+
+    assert_eq!(response.status.unwrap(), status::Ok);
+    assert_eq!(result_body, b"Hello, world!");
 }
 ```
 
 ## API
 
-### Request
+### request
+The request API implements convenience methods for all the major HTTP verbs
+except CONNECT and TRACE. They're broken down as follows.
 
-> `request::new<S: Str>(method: method::Method, host: S) -> Request`
+```Rust
+// Generates empty body
+request::get<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response>
+request::options<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response>
+request::delete<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response>
+request::head<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response>
 
-Create a new request at `/` on the specified host with the specified method.
-
-Ex:
-
-```rust
-let req = request::new(method::Get, "localhost:3000");
-assert_eq!(req.method, method::Get);
-assert_eq!(req.url.serialize().as_slice(), "http://localhost:3000/");
+// Accepts a `&str` body
+request::post<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response>
+request::patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response>
+request::put<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response>
 ```
 
-> `request::at(method: method::Method, path: url::Url) -> Request`
-
-Create a new request at the specific Url with the specified method.
-
-Ex:
-
-```rust
-let req = request::at(method::Post, Url::parse("http://www.google.com/").unwrap());
-assert_eq!(req.method, method::Post);
-assert_eq!(req.url.serialize().as_slice(), "http://www.google.com/");
-```
-
-> `request::at_with<S: Str>(method: method::Method, path: url::Url, body: S) -> Request`
-
-Create a new request at the specified Url with the specified method
-and the specified content as the body of the request.
-
-Ex:
-
-```rust
-let req = request::at_with(method::Put, Url::parse("http://www.google.com/").unwrap(), "Hello Google!");
-assert_eq!(req.method, method::Put);
-assert_eq!(req.url.serialize().as_slice(), "http://www.google.com/");
-assert_eq!(req.body.as_slice(), "Hello Google!");
-```
-
-### Response
-
-> `response::new() -> Response`
-
-Create a new, blank, response.
-
-Ex:
-
-```rust
-let mut res = response::new();
-assert_eq!(res.status, None);
-assert_eq!(res.body.read_to_string().unwrap().as_slice(), "");
-```
-
-> `response::with<B: BytesContainer>(status: status::Status, body: B) -> Response`
-
-Create a new response with the specified body and status.
-
-Ex:
-
-```rust
-let mut res = response::with(status::Ok, "Hello World!");
-assert_eq!(res.status, Some(status::Ok));
-assert_eq!(res.body.read_to_string().unwrap().as_slice(), "Hello World!");
-```
+The requests that it makes sense for accept a `&str` body, while the other
+requests generate an empty body for you. The request is passed directly to 
+the `handle` call on the Handler, and the raw result is returned to you.
 
 ### Creating project layout for tests
 
@@ -116,4 +98,3 @@ Come find us on `#iron` or `#rust` on `irc.mozilla.net`
 ### License
 
 MIT
-
