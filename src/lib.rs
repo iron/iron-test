@@ -120,17 +120,19 @@ pub mod mock {
                                     body: &str,
                                     mut headers: Headers,
                                     handler: H) -> IronResult<Response> {
+            let content_length = body.len() as u64;
             let data = Cursor::new(body.as_bytes().to_vec());
             let mut stream = MockStream::new(data);
             // Clone the stream so we can read the peer_addr off the original.
             let mut stream_clone = stream.clone();
             let mut reader = BufReader::new(&mut stream_clone as &mut NetworkStream);
-            let reader = HttpReader::EofReader(&mut reader);
+            let reader = HttpReader::SizedReader(&mut reader, content_length);
 
             let url = Url::parse(path).unwrap();
             let addr = stream.peer_addr().unwrap();
 
             headers.set(headers::UserAgent("iron-test".to_string()));
+            headers.set(headers::ContentLength(content_length));
 
             let mut req = Request {
                 method: method,
