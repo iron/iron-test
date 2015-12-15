@@ -15,5 +15,6 @@ url = "0.5"
 uuid = "0.1"
 
 [dev-dependencies]
+mime = "0.1"
 router = "0.0"
 urlencoded = "0.2"

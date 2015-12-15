@@ -20,6 +20,16 @@ impl Handler for RouterHandler {
     }
 }
 
+fn app_router() -> Router {
+    let mut router = Router::new();
+    router.get("/:id", RouterHandler);
+    router
+}
+
+fn main() {
+    Iron::new(app_router()).http("localhost:3000").ok();
+}
+
 #[cfg(test)]
 mod test {
     use iron::Headers;
@@ -30,16 +40,14 @@ mod test {
 
     use router::Router;
 
+    use super::app_router;
     use super::RouterHandler;
 
     #[test]
     fn test_router() {
-        let mut router = Router::new();
-        router.get("/:id", RouterHandler);
-
         let response = request::get("http://localhost:3000/1",
                                     Headers::new(),
-                                    router);
+                                    app_router());
         let result = extract_body(response.unwrap());
 
         assert_eq!(result, b"1");

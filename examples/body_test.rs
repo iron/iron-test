@@ -21,6 +21,10 @@ impl Handler for BodyHandler {
     }
 }
 
+fn main() {
+    Iron::new(BodyHandler).http("localhost:3000").ok();
+}
+
 #[cfg(test)]
 mod test {
     use iron::Headers;
