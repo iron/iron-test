@@ -30,9 +30,8 @@ mod test {
     use iron::Headers;
     use iron::headers::ContentType;
     use iron::prelude::*;
-    use iron::response::ResponseBody;
 
-    use iron_test::mock::request;
+    use iron_test::{request, response};
 
     use mime::Mime;
 
@@ -47,22 +46,8 @@ mod test {
                                      headers,
                                      "first_name=Example&last_name=User",
                                      BodyHandler);
-        let result = extract_body(response.unwrap());
+        let result = response::extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"Example User");
-    }
-
-    fn extract_body(response: Response) -> Vec<u8> {
-        let mut result = Vec::new();
-
-        {
-            let mut response_body = ResponseBody::new(&mut result);
-            match response.body {
-                Some(mut body) => body.write_body(&mut response_body).ok(),
-                None => None,
-            };
-        }
-
-        result
     }
 }

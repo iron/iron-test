@@ -34,36 +34,20 @@ fn main() {
 mod test {
     use iron::Headers;
     use iron::prelude::*;
-    use iron::response::ResponseBody;
 
-    use iron_test::mock::request;
+    use iron_test::{request, response};
 
     use router::Router;
 
-    use super::app_router;
-    use super::RouterHandler;
+    use super::{app_router, RouterHandler};
 
     #[test]
     fn test_router() {
         let response = request::get("http://localhost:3000/1",
                                     Headers::new(),
                                     app_router());
-        let result = extract_body(response.unwrap());
+        let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"1");
-    }
-
-    fn extract_body(response: Response) -> Vec<u8> {
-        let mut result = Vec::new();
-
-        {
-            let mut response_body = ResponseBody::new(&mut result);
-            match response.body {
-                Some(mut body) => body.write_body(&mut response_body).ok(),
-                None => None,
-            };
-        }
-
-        result
     }
 }

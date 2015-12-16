@@ -14,8 +14,7 @@ extern crate iron_test;
 
 use iron::prelude::*;
 use iron::{Handler, Headers, status};
-use iron::response::ResponseBody;
-use iron_test::mock::request;
+use iron_test::{request, response};
 
 struct HelloWorldHandler;
 
@@ -30,17 +29,8 @@ fn test_hello_world() {
     let response = request::get("http://localhost:3000/hello",
                                 Headers::new(),
                                 HelloWorldHandler).unwrap();
-    let mut result_body = Vec::new();
+    let result_body = response::extract_body_to_bytes(response.unwrap());
 
-    {
-      let mut response_body = ResponseBody::new(&mut result_body);
-      match response.body {
-        Some(mut body) => body.write_body(&mut response_body).ok(),
-        None => None,
-      };
-    }
-
-    assert_eq!(response.status.unwrap(), status::Ok);
     assert_eq!(result_body, b"Hello, world!");
 }
 ```
