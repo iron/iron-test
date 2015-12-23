@@ -45,7 +45,7 @@ mod test {
     fn test_router() {
         let response = request::get("http://localhost:3000/1",
                                     Headers::new(),
-                                    app_router());
+                                    &app_router());
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"1");

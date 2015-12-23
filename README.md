@@ -19,16 +19,16 @@ use iron_test::{request, response};
 struct HelloWorldHandler;
 
 impl Handler for HelloWorldHandler {
-  fn handle(&self, _: &mut Request) -> IronResult<Response> {
-    Ok(Response::with((status::Ok, "Hello, world!")))
-  }
+    fn handle(&self, _: &mut Request) -> IronResult<Response> {
+        Ok(Response::with((status::Ok, "Hello, world!")))
+    }
 }
 
 #[test]
 fn test_hello_world() {
     let response = request::get("http://localhost:3000/hello",
                                 Headers::new(),
-                                HelloWorldHandler).unwrap();
+                                &HelloWorldHandler).unwrap();
     let result_body = response::extract_body_to_bytes(response.unwrap());
 
     assert_eq!(result_body, b"Hello, world!");

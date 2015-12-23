@@ -12,45 +12,47 @@ use std::io::Cursor;
 use super::mock_stream::MockStream;
 
 /// Convenience method for making GET requests to Iron Handlers.
-pub fn get<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response> {
-    make_request(method::Get, path, "", headers, handler)
+pub fn get<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
+    request(method::Get, path, "", headers, handler)
 }
 
 /// Convenience method for making POST requests with a body to Iron Handlers.
-pub fn post<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response> {
-    make_request(method::Post, path, body, headers, handler)
+pub fn post<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+    request(method::Post, path, body, headers, handler)
 }
 
 /// Convenience method for making PATCH requests with a body to Iron Handlers.
-pub fn patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response> {
-    make_request(method::Patch, path, body, headers, handler)
+pub fn patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+    request(method::Patch, path, body, headers, handler)
 }
 
 /// Convenience method for making PUT requests with a body to Iron Handlers.
-pub fn put<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response> {
-    make_request(method::Put, path, body, headers, handler)
+pub fn put<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+    request(method::Put, path, body, headers, handler)
 }
 
 /// Convenience method for making DELETE requests to Iron Handlers.
-pub fn delete<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response> {
-    make_request(method::Delete, path, "", headers, handler)
+pub fn delete<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
+    request(method::Delete, path, "", headers, handler)
 }
 
 /// Convenience method for making OPTIONS requests to Iron Handlers.
-pub fn options<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response> {
-    make_request(method::Options, path, "", headers, handler)
+pub fn options<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
+    request(method::Options, path, "", headers, handler)
 }
 
 /// Convenience method for making HEAD requests to Iron Handlers.
-pub fn head<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response> {
-    make_request(method::Head, path, "", headers, handler)
+pub fn head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
+    request(method::Head, path, "", headers, handler)
 }
 
-fn make_request<H: Handler>(method: method::Method,
+/// Constructs an Iron::Request from the given parts and passes it to the
+/// `handle` method on the given Handler.
+pub fn request<H: Handler>(method: method::Method,
                             path: &str,
                             body: &str,
                             mut headers: Headers,
-                            handler: H) -> IronResult<Response> {
+                            handler: &H) -> IronResult<Response> {
     let content_length = body.len() as u64;
     let data = Cursor::new(body.as_bytes().to_vec());
     let mut stream = MockStream::new(data);
@@ -166,7 +168,7 @@ mod test {
 
     #[test]
     fn test_get() {
-        let response = get("http://localhost:3000", Headers::new(), HelloWorldHandler);
+        let response = get("http://localhost:3000", Headers::new(), &HelloWorldHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"Hello, world!");
@@ -180,7 +182,7 @@ mod test {
         let response = post("http://localhost:3000/users",
                             headers,
                             "first_name=Example&last_name=User",
-                            PostHandler);
+                            &PostHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"Example User");
@@ -197,7 +199,7 @@ mod test {
         let response = patch("http://localhost:3000/users/1",
                              headers,
                              "first_name=Example&last_name=User",
-                             router);
+                             &router);
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"Example User 1");
@@ -214,7 +216,7 @@ mod test {
         let response = put("http://localhost:3000/users/2",
                            headers,
                            "first_name=Example&last_name=User",
-                           router);
+                           &router);
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"Example User 2");
@@ -225,7 +227,7 @@ mod test {
         let mut router = router::Router::new();
         router.delete("/:id", RouterHandler);
 
-        let response = delete("http://localhost:3000/1", Headers::new(), router);
+        let response = delete("http://localhost:3000/1", Headers::new(), &router);
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"1");
@@ -234,7 +236,7 @@ mod test {
 
     #[test]
     fn test_options() {
-        let response = options("http://localhost:3000/users/options", Headers::new(), OptionsHandler);
+        let response = options("http://localhost:3000/users/options", Headers::new(), &OptionsHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"ALLOW: GET,POST");
@@ -242,7 +244,7 @@ mod test {
 
     #[test]
     fn test_head() {
-        let response = head("http://localhost:3000/users", Headers::new(), HeadHandler);
+        let response = head("http://localhost:3000/users", Headers::new(), &HeadHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, []);

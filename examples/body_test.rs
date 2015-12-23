@@ -45,7 +45,7 @@ mod test {
         let response = request::post("http://localhost:3000/users",
                                      headers,
                                      "first_name=Example&last_name=User",
-                                     BodyHandler);
+                                     &BodyHandler);
         let result = response::extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"Example User");

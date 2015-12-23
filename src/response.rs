@@ -1,12 +1,10 @@
 use iron::prelude::*;
 use iron::response::{ResponseBody};
 
-use std::string::FromUtf8Error;
-
 /// Extracts a utf8 response body to a String.
-pub fn extract_body_to_string(response: Response) -> Result<String, FromUtf8Error> {
+pub fn extract_body_to_string(response: Response) -> String {
     let result = extract_body_to_bytes(response);
-    String::from_utf8(result)
+    String::from_utf8(result).unwrap()
 }
 
 /// Extracts a response body to a Vector of bytes.
@@ -46,17 +44,17 @@ mod test {
     fn test_extract_body_to_string() {
         let response = request::get("http://localhost:3000",
                            Headers::new(),
-                           HelloWorldHandler);
+                           &HelloWorldHandler);
         let result = extract_body_to_string(response.unwrap());
 
-        assert_eq!(result.unwrap(), "Hello, world!");
+        assert_eq!(result, "Hello, world!");
     }
 
     #[test]
     fn test_extract_body_to_bytes() {
         let response = request::get("http://localhost:3000",
                            Headers::new(),
-                           HelloWorldHandler);
+                           &HelloWorldHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"Hello, world!");
