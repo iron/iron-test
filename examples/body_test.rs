@@ -22,7 +22,7 @@ impl Handler for BodyHandler {
 }
 
 fn main() {
-    Iron::new(BodyHandler).http("localhost:3000").ok();
+    Iron::new(BodyHandler).http("localhost:3000").unwrap();
 }
 
 #[cfg(test)]

@@ -27,7 +27,7 @@ fn app_router() -> Router {
 }
 
 fn main() {
-    Iron::new(app_router()).http("localhost:3000").ok();
+    Iron::new(app_router()).http("localhost:3000").unwrap();
 }
 
 #[cfg(test)]
