@@ -43,15 +43,15 @@ except CONNECT and TRACE. They're broken down as follows.
 
 ```Rust
 // Generates empty body
-request::get<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response>
-request::options<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response>
-request::delete<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response>
-request::head<H: Handler>(path: &str, headers: Headers, handler: H) -> IronResult<Response>
+request::get<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response>
+request::options<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response>
+request::delete<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response>
+request::head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response>
 
 // Accepts a `&str` body
-request::post<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response>
-request::patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response>
-request::put<H: Handler>(path: &str, headers: Headers, body: &str, handler: H) -> IronResult<Response>
+request::post<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
+request::patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
+request::put<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
 ```
 
 The requests that it makes sense for accept a `&str` body, while the other
