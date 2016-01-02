@@ -52,14 +52,47 @@ request::head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResu
 request::post<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
 request::patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
 request::put<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
+
+// Accepts a `MultipartBody` body
+request::post_multipart<H: Handler>(path: &str, mut headers: Headers, mut body: MultipartBody, handler: &H) -> IronResult<Response>
 ```
 
-The requests that it makes sense for accept a `&str` body, while the other
-requests generate an empty body for you. The request is passed directly to 
-the `handle` call on the Handler, and the raw result is returned to you.
+The generated request is passed directly to the `handle` call on the Handler,
+and the raw result is returned to you.
 
 For examples of testing different handlers, head over to the [examples
 directory](https://github.com/reem/iron-test/tree/master/examples).
+
+#### MultipartBody
+The MultipartBody struct is used to construct a multipart/form-data request,
+which is normally used for POSTing files to a web application. The API is as follows:
+
+```Rust
+impl MultipartBody {
+    // Initializes a new MultipartBody with a generated boundary.
+    pub fn new() -> MultipartBody
+
+    // Writes a key:value pair to an instance of a MultipartBody, is used for adding
+    // normal text key:values to a multipart request body.
+    pub fn write(&mut self, key: String, value: String)
+
+    // Writes a key:file pair to an instance of a MultipartBody, is used for adding
+    // a file's filename and contents to a multipart request body at a specific key.
+    pub fn upload(&mut self, key: String, path: PathBuf)
+}
+```
+
+### response
+The response API implements convenience methods for working with and testing
+Iron Responses. The current API contains two helpers:
+
+```Rust
+response::extract_body_to_bytes(response: Response) -> Vec<u8>
+response::extract_body_to_string(response: Response) -> String
+```
+
+Both extract methods take an Iron Response, read the body out to a new buffer,
+and return it to you in their respective forms.
 
 ### Creating project layout for tests
 
