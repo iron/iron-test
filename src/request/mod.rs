@@ -137,7 +137,6 @@ mod test {
     extern crate router;
 
     use iron::headers::Headers;
-    use iron::mime::Mime;
     use iron::prelude::*;
     use iron::{Handler, headers, status};
 
@@ -285,8 +284,7 @@ mod test {
     #[test]
     fn test_post() {
         let mut headers = Headers::new();
-        let mime: Mime = "application/x-www-form-urlencoded".parse().unwrap();
-        headers.set(headers::ContentType(mime));
+        headers.set(headers::ContentType::form_url_encoded());
         let response = post("http://localhost:3000/users",
                             headers,
                             StringBody::new("first_name=Example&last_name=User"),
@@ -302,8 +300,7 @@ mod test {
         router.patch("/users/:id", UpdateHandler);
 
         let mut headers = Headers::new();
-        let mime: Mime = "application/x-www-form-urlencoded".parse().unwrap();
-        headers.set(headers::ContentType(mime));
+        headers.set(headers::ContentType::form_url_encoded());
         let response = patch("http://localhost:3000/users/1",
                              headers,
                              StringBody::new("first_name=Example&last_name=User"),
@@ -319,8 +316,7 @@ mod test {
         router.put("/users/:id", UpdateHandler);
 
         let mut headers = Headers::new();
-        let mime: Mime = "application/x-www-form-urlencoded".parse().unwrap();
-        headers.set(headers::ContentType(mime));
+        headers.set(headers::ContentType::form_url_encoded());
         let response = put("http://localhost:3000/users/2",
                            headers,
                            StringBody::new("first_name=Example&last_name=User"),
