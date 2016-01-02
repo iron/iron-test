@@ -1,23 +1,31 @@
 extern crate iron;
 extern crate iron_test;
 extern crate mime;
-extern crate urlencoded;
+extern crate params;
 
 use iron::{Handler, status};
 use iron::prelude::*;
-
-use urlencoded::UrlEncodedBody;
 
 struct BodyHandler;
 
 impl Handler for BodyHandler {
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
-        let body = req.get_ref::<UrlEncodedBody>()
+        let params = req.get_ref::<params::Params>()
             .expect("Expected to extract a UrlEncodedBody from the request");
-        let first_name = body.get("first_name").unwrap()[0].to_owned();
-        let last_name = body.get("last_name").unwrap()[0].to_owned();
+        let first_name = get_params_value(params, "first_name");
+        let last_name = get_params_value(params, "last_name");
 
         Ok(Response::with((status::Ok, first_name + " " + &last_name)))
+    }
+}
+
+fn get_params_value<'a>(params: &params::Map, key: &'a str) -> String {
+    let value = params.get(key);
+
+    // destructure the Value enum to get the param value out
+    match value {
+        Some(&params::Value::String(ref string)) => string.clone(),
+        _ => String::new(),
     }
 }
 

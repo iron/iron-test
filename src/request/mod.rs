@@ -133,7 +133,6 @@ impl RequestBody for StringBody {
 mod test {
     extern crate params;
     extern crate router;
-    extern crate urlencoded;
 
     use iron::headers::Headers;
     use iron::mime::Mime;
@@ -147,9 +146,17 @@ mod test {
     use std::io::Write;
     use std::path::PathBuf;
 
-    use self::urlencoded::UrlEncodedBody;
-
     use super::*;
+
+    fn get_params_value<'a>(params: &params::Map, key: &'a str) -> String {
+        let value = params.get(key);
+
+        // destructure the Value enum to get the param value out
+        match value {
+            Some(&params::Value::String(ref string)) => string.clone(),
+            _ => String::new(),
+        }
+    }
 
     struct HelloWorldHandler;
 
@@ -176,10 +183,10 @@ mod test {
 
     impl Handler for PostHandler {
         fn handle(&self, req: &mut Request) -> IronResult<Response> {
-            let body = req.get_ref::<UrlEncodedBody>()
-                .expect("Expected to extract a UrlEncodedBody from the request");
-            let first_name = body.get("first_name").unwrap()[0].to_owned();
-            let last_name = body.get("last_name").unwrap()[0].to_owned();
+            let params = req.get_ref::<params::Params>()
+                .expect("Expected to extract Params from the request");
+            let first_name = get_params_value(params, "first_name");
+            let last_name = get_params_value(params, "last_name");
 
             Ok(Response::with((status::Ok, first_name + " " + &last_name)))
         }
@@ -196,10 +203,10 @@ mod test {
                 params.find("id").unwrap().parse::<String>().unwrap()
             };
 
-            let body = req.get_ref::<UrlEncodedBody>()
-                .expect("Expected to extract a UrlEncodedBody from the request");
-            let first_name = body.get("first_name").unwrap()[0].to_owned();
-            let last_name = body.get("last_name").unwrap()[0].to_owned();
+            let params = req.get_ref::<params::Params>()
+                .expect("Expected to extract Params from the request");
+            let first_name = get_params_value(params, "first_name");
+            let last_name = get_params_value(params, "last_name");
 
             Ok(Response::with((status::Ok, [first_name, last_name, id].join(" "))))
         }
