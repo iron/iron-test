@@ -2,6 +2,8 @@
 use hyper::buffer::BufReader;
 use hyper::http::h1::HttpReader;
 use hyper::net::NetworkStream;
+use hyper::header::ContentType;
+use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
 use iron::prelude::*;
 use iron::request::Body;
@@ -11,6 +13,9 @@ use std::io::Cursor;
 
 use super::mock_stream::MockStream;
 
+mod multipart;
+pub use self::multipart::MultipartBody;
+
 /// Convenience method for making GET requests to Iron Handlers.
 pub fn get<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
     request(method::Get, path, StringBody::new(""), headers, handler)
@@ -19,6 +24,15 @@ pub fn get<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<
 /// Convenience method for making POST requests with a body to Iron Handlers.
 pub fn post<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response> {
     request(method::Post, path, body, headers, handler)
+}
+
+/// Convenience method for POSTing multipart/form-data requests to Iron Handlers.
+/// It takes a MultiPart Body for the body, which is used to build the multipart
+/// request body.
+pub fn post_multipart<H: Handler>(path: &str, mut headers: Headers, mut body: MultipartBody, handler: &H) -> IronResult<Response> {
+    let request_body = body.for_request();
+    headers.set(ContentType(Mime(TopLevel::Multipart, SubLevel::FormData, vec![(Attr::Boundary, Value::Ext(body.boundary))])));
+    request(method::Post, path, request_body, headers, handler)
 }
 
 /// Convenience method for making PATCH requests with a body to Iron Handlers.
@@ -117,6 +131,7 @@ impl RequestBody for StringBody {
 
 #[cfg(test)]
 mod test {
+    extern crate params;
     extern crate router;
     extern crate urlencoded;
 
@@ -126,6 +141,11 @@ mod test {
     use iron::{Handler, headers, status};
 
     use response::extract_body_to_bytes;
+    use response::extract_body_to_string;
+
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::PathBuf;
 
     use self::urlencoded::UrlEncodedBody;
 
@@ -199,6 +219,50 @@ mod test {
         fn handle(&self, _: &mut Request) -> IronResult<Response> {
             Ok(Response::with(status::Ok))
         }
+    }
+
+    struct MultipartFormHandler;
+
+    impl Handler for MultipartFormHandler {
+        fn handle(&self, req: &mut Request) -> IronResult<Response> {
+            let params = req.get_ref::<params::Params>().expect("Params");
+            let value = params.get("key");
+
+            match value {
+                Some(&params::Value::String(ref string)) => {
+                    Ok(Response::with((status::Ok, string.to_owned())))
+                },
+                Some(&params::Value::File(ref file)) => {
+                    Ok(Response::with((status::Ok, file.filename().unwrap())))
+                },
+                _ => Ok(Response::with(status::Ok)),
+            }
+        }
+    }
+
+    #[test]
+    fn test_post_multipart_text() {
+        let mut body = super::MultipartBody::new();
+        body.write("key".to_owned(), "my_song".to_owned());
+        let response = post_multipart("http://localhost:3000", Headers::new(), body, &MultipartFormHandler);
+        let result = extract_body_to_string(response.unwrap());
+
+        assert_eq!(result, "my_song");
+    }
+
+    #[test]
+    fn test_post_multipart_file() {
+        let mut body = super::MultipartBody::new();
+
+        let path = PathBuf::from("/tmp/file.txt");
+        let mut file = File::create(path.clone()).unwrap();
+        file.write_all(b"Hello, world!").ok();
+
+        body.upload("key".to_owned(), path);
+        let response = post_multipart("http://localhost:3000", Headers::new(), body, &MultipartFormHandler);
+        let result = extract_body_to_string(response.unwrap());
+
+        assert_eq!(result, "file.txt");
     }
 
     #[test]
