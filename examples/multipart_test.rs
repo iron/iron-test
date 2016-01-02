@@ -27,6 +27,10 @@ impl Handler for MultipartHandler {
     }
 }
 
+fn main() {
+    Iron::new(MultipartHandler).http("localhost:3000").unwrap();
+}
+
 #[cfg(test)]
 mod test {
     use iron::Headers;
