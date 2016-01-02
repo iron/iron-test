@@ -31,7 +31,9 @@ pub fn post<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -
 /// request body.
 pub fn post_multipart<H: Handler>(path: &str, mut headers: Headers, mut body: MultipartBody, handler: &H) -> IronResult<Response> {
     let request_body = body.for_request();
-    headers.set(ContentType(Mime(TopLevel::Multipart, SubLevel::FormData, vec![(Attr::Boundary, Value::Ext(body.boundary))])));
+    headers.set(ContentType(Mime(TopLevel::Multipart,
+                                 SubLevel::FormData,
+                                 vec![(Attr::Boundary, Value::Ext(body.boundary))])));
     request(method::Post, path, request_body, headers, handler)
 }
 
