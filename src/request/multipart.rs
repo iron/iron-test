@@ -66,9 +66,17 @@ impl MultipartEntry for MultipartFileEntry {
 
     fn value(&self) -> String {
         let mut file_body = String::new();
-        let mut file = File::open(self.path.clone()).unwrap();
-        file.read_to_string(&mut file_body).ok();
-        file_body
+        let file_result = File::open(self.path.clone());
+
+        match file_result {
+            Ok(mut file) => {
+                file.read_to_string(&mut file_body).ok();
+                file_body
+            },
+            // Since this is used in tests, just panic with the error if
+            // we had problems opening the file.
+            Err(err) => panic!("{}", err),
+        }
     }
 }
 
@@ -160,5 +168,23 @@ impl MultipartBody {
 
     fn generate_boundary() -> String {
         rand::thread_rng().gen_ascii_chars().take(BOUNDARY_LENGTH).collect()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::path::PathBuf;
+
+    use super::{MultipartFileEntry, MultipartEntry};
+
+    #[test]
+    #[should_panic(expected = "No such file or directory (os error 2)")]
+    fn test_invalid_file() {
+        let entry = MultipartFileEntry {
+            key: "key".to_owned(),
+            path: PathBuf::from("/invalid/file")
+        };
+
+        entry.value();
     }
 }
