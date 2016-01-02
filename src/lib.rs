@@ -7,6 +7,7 @@ extern crate iron;
 extern crate hyper;
 extern crate url;
 extern crate uuid;
+extern crate rand;
 
 #[macro_use]
 extern crate log;

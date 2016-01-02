@@ -8,6 +8,7 @@ repository = "https://github.com/reem/iron-test"
 license = "MIT"
 
 [dependencies]
+rand = "0.3"
 hyper = "0.7"
 iron = "0.2"
 log = "0.3"
@@ -18,3 +19,4 @@ uuid = "0.1"
 mime = "0.1"
 router = "0.0"
 urlencoded = "0.2"
+params = "0.0"
