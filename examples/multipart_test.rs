@@ -48,10 +48,10 @@ mod test {
         let mut body = request::MultipartBody::new();
         body.write("key".to_owned(), "my value".to_owned());
 
-        let response = request::post_multipart("http://localhost:3000/multipart",
-                                               Headers::new(),
-                                               body,
-                                               &MultipartHandler);
+        let response = request::post("http://localhost:3000/multipart",
+                                     Headers::new(),
+                                     body,
+                                     &MultipartHandler);
         let result = response::extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, b"my value");
@@ -66,10 +66,10 @@ mod test {
         file.write_all(b"Hello, world!").ok();
 
         body.upload("key".to_owned(), path);
-        let response = request::post_multipart("http://localhost:3000",
-                                               Headers::new(),
-                                               body,
-                                               &MultipartHandler);
+        let response = request::post("http://localhost:3000",
+                                     Headers::new(),
+                                     body,
+                                     &MultipartHandler);
         let result = response::extract_body_to_string(response.unwrap());
 
         assert_eq!(result, "file.txt");

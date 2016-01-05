@@ -2,8 +2,6 @@
 use hyper::buffer::BufReader;
 use hyper::http::h1::HttpReader;
 use hyper::net::NetworkStream;
-use hyper::header::ContentType;
-use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
 use iron::prelude::*;
 use iron::request::Body;
@@ -24,17 +22,6 @@ pub fn get<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<
 /// Convenience method for making POST requests with a body to Iron Handlers.
 pub fn post<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response> {
     request(method::Post, path, body, headers, handler)
-}
-
-/// Convenience method for POSTing multipart/form-data requests to Iron Handlers.
-/// It takes a MultiPart Body for the body, which is used to build the multipart
-/// request body.
-pub fn post_multipart<H: Handler>(path: &str, mut headers: Headers, mut body: MultipartBody, handler: &H) -> IronResult<Response> {
-    let request_body = body.for_request();
-    headers.set(ContentType(Mime(TopLevel::Multipart,
-                                 SubLevel::FormData,
-                                 vec![(Attr::Boundary, Value::Ext(body.boundary))])));
-    request(method::Post, path, request_body, headers, handler)
 }
 
 /// Convenience method for making PATCH requests with a body to Iron Handlers.
@@ -65,11 +52,11 @@ pub fn head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult
 /// Constructs an Iron::Request from the given parts and passes it to the
 /// `handle` method on the given Handler.
 pub fn request<H: Handler, B: RequestBody>(method: method::Method,
-                            path: &str,
-                            body: B,
-                            mut headers: Headers,
-                            handler: &H) -> IronResult<Response> {
-    body.set_headers(&headers);
+                                           path: &str,
+                                           mut body: B,
+                                           mut headers: Headers,
+                                           handler: &H) -> IronResult<Response> {
+    body.set_headers(&mut headers);
     let body = body.for_request();
     let content_length = body.len() as u64;
     let data = Cursor::new(body.as_bytes().to_vec());
@@ -101,10 +88,10 @@ pub fn request<H: Handler, B: RequestBody>(method: method::Method,
 /// A trait describing the interface a request body must implement.
 pub trait RequestBody {
     /// The final body to write to the request, in the form of a string.
-    fn for_request(&self) -> &str;
+    fn for_request(&mut self) -> String;
 
     /// Set any appropriate headers for the request e.g. Content-Type
-    fn set_headers(&self, headers: &Headers);
+    fn set_headers(&self, headers: &mut Headers);
 }
 
 /// A simple string request body.
@@ -122,11 +109,11 @@ impl StringBody {
 }
 
 impl RequestBody for StringBody {
-    fn for_request(&self) -> &str {
-        &self.string
+    fn for_request(&mut self) -> String {
+        self.string.clone()
     }
 
-    fn set_headers(&self, _: &Headers) {
+    fn set_headers(&self, _: &mut Headers) {
         ()
     }
 }
@@ -252,7 +239,7 @@ mod test {
     fn test_post_multipart_text() {
         let mut body = super::MultipartBody::new();
         body.write("key".to_owned(), "my_song".to_owned());
-        let response = post_multipart("http://localhost:3000", Headers::new(), body, &MultipartFormHandler);
+        let response = post("http://localhost:3000", Headers::new(), body, &MultipartFormHandler);
         let result = extract_body_to_string(response.unwrap());
 
         assert_eq!(result, "my_song");
@@ -267,7 +254,7 @@ mod test {
         file.write_all(b"Hello, world!").ok();
 
         body.upload("key".to_owned(), path);
-        let response = post_multipart("http://localhost:3000", Headers::new(), body, &MultipartFormHandler);
+        let response = post("http://localhost:3000", Headers::new(), body, &MultipartFormHandler);
         let result = extract_body_to_string(response.unwrap());
 
         assert_eq!(result, "file.txt");

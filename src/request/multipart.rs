@@ -1,9 +1,16 @@
-use rand;
+use hyper::header::ContentType;
+use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
+
+use iron::Headers;
+
 use rand::Rng;
+use rand;
 
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+
+use super::RequestBody;
 
 pub const BOUNDARY_LENGTH: usize = 32;
 
@@ -153,21 +160,29 @@ impl MultipartBody {
         entry.write_value(self);
     }
 
-    /// Builds the final body for use in an Iron::Request. Adds a closing
-    /// boundary to the parts Vector, and then joins everything on a newline.
-    pub fn for_request(&mut self) -> String {
-        let closing_boundary = self.full_boundary() + "--";
-        self.parts.push(closing_boundary);
-        self.parts.join("\r\n")
-    }
-
-
     fn full_boundary(&self) -> String {
         "--".to_owned() + &self.boundary.clone()
     }
 
     fn generate_boundary() -> String {
         rand::thread_rng().gen_ascii_chars().take(BOUNDARY_LENGTH).collect()
+    }
+}
+
+impl RequestBody for MultipartBody {
+    /// Builds the final body for use in an Iron::Request. Adds a closing
+    /// boundary to the parts Vector, and then joins everything on a newline.
+    fn for_request(&mut self) -> String {
+        let closing_boundary = self.full_boundary() + "--";
+        self.parts.push(closing_boundary);
+        self.parts.join("\r\n")
+    }
+
+    /// Set the Content-Type as multipart/form-data; boundary=<boundary>
+    fn set_headers(&self, headers: &mut Headers) {
+        headers.set(ContentType(Mime(TopLevel::Multipart,
+                                     SubLevel::FormData,
+                                     vec![(Attr::Boundary, Value::Ext(self.boundary.clone()))])));
     }
 }
 

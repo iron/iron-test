@@ -54,30 +54,41 @@ request::patch<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B
 request::put<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response>
 ```
 
-Requests that accept a body can use anything that implements RequestBody. Right
-now that's only `StringBody`, which is a just a simple String body. In the
-future, this trait will be used to implement multipart and json requests.
+Requests that accept a body can use anything that implements RequestBody. The
+different types of bodies currently are:
 
-The request is passed directly to the `handle` call on the Handler, and the raw
+```Rust
+// A simple string body used for wrapping plain text request bodies. Infers no headers.
+StringBody
+
+// A multipart request body, most commonly used for uploading and posting files.
+// Infers a Content-Type header of multipart/form-data; boundary=<generated_boundary>
+MultipartBody
+```
+
+The fully built request is passed directly to the `handle` call on the Handler,
+and the raw result returned to the user.
 
 For examples of testing different handlers, head over to the [examples
 directory](https://github.com/reem/iron-test/tree/master/examples).
 
 #### MultipartBody
 The MultipartBody struct is used to construct a multipart/form-data request,
-which is normally used for POSTing files to a web application. The API is as follows:
+which is normally used for POSTing files to a web application. The API is as
+follows:
 
 ```Rust
 impl MultipartBody {
     // Initializes a new MultipartBody with a generated boundary.
     pub fn new() -> MultipartBody
 
-    // Writes a key:value pair to an instance of a MultipartBody, is used for adding
-    // normal text key:values to a multipart request body.
+    // Writes a key:value pair to an instance of a MultipartBody, is used for
+    // adding normal text key:values to a multipart request body.
     pub fn write(&mut self, key: String, value: String)
 
-    // Writes a key:file pair to an instance of a MultipartBody, is used for adding
-    // a file's filename and contents to a multipart request body at a specific key.
+    // Writes a key:file pair to an instance of a MultipartBody, is used for
+    // adding a file's filename and contents to a multipart request body at
+    // a specific key.
     pub fn upload(&mut self, key: String, path: PathBuf)
 }
 ```
