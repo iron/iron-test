@@ -31,7 +31,7 @@ mod test {
     use iron::headers::ContentType;
     use iron::prelude::*;
 
-    use iron_test::{request, response};
+    use iron_test::{request, response, StringBody};
 
     use mime::Mime;
 
@@ -44,7 +44,7 @@ mod test {
         headers.set(ContentType(mime));
         let response = request::post("http://localhost:3000/users",
                                      headers,
-                                     "first_name=Example&last_name=User",
+                                     StringBody::new("first_name=Example&last_name=User"),
                                      &BodyHandler);
         let result = response::extract_body_to_bytes(response.unwrap());
 
