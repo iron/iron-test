@@ -55,8 +55,9 @@ request::put<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, 
 ```
 
 Requests that accept a body can use anything that implements RequestBody. Right
-now that's only `StringBody`, which is a just a simple String body. In the
-future, this trait will be used to implement multipart and json requests.
+now both `String` and `&'a str` implement RequestBody, so you can use simple
+string bodies. In the future, this trait will be used to implement multipart
+and json requests.
 
 The request is passed directly to the `handle` call on the Handler, and the raw
 result is returned to you.

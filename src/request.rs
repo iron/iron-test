@@ -13,7 +13,7 @@ use super::mock_stream::MockStream;
 
 /// Convenience method for making GET requests to Iron Handlers.
 pub fn get<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
-    request(method::Get, path, StringBody::new(""), headers, handler)
+    request(method::Get, path, "", headers, handler)
 }
 
 /// Convenience method for making POST requests with a body to Iron Handlers.
@@ -33,17 +33,17 @@ pub fn put<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, ha
 
 /// Convenience method for making DELETE requests to Iron Handlers.
 pub fn delete<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
-    request(method::Delete, path, StringBody::new(""), headers, handler)
+    request(method::Delete, path, "", headers, handler)
 }
 
 /// Convenience method for making OPTIONS requests to Iron Handlers.
 pub fn options<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
-    request(method::Options, path, StringBody::new(""), headers, handler)
+    request(method::Options, path, "", headers, handler)
 }
 
 /// Convenience method for making HEAD requests to Iron Handlers.
 pub fn head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
-    request(method::Head, path, StringBody::new(""), headers, handler)
+    request(method::Head, path, "", headers, handler)
 }
 
 /// Constructs an Iron::Request from the given parts and passes it to the
@@ -85,29 +85,25 @@ pub fn request<H: Handler, B: RequestBody>(method: method::Method,
 /// A trait describing the interface a request body must implement.
 pub trait RequestBody {
     /// The final body to write to the request, in the form of a string.
-    fn for_request(&self) -> String;
+    fn for_request(self) -> String;
 
     /// Set any appropriate headers for the request e.g. Content-Type
     fn set_headers(&self, headers: &Headers);
 }
 
-/// A simple string request body.
-pub struct StringBody {
-    string: String,
-}
+impl RequestBody for String {
+    fn for_request(self) -> String {
+        self
+    }
 
-impl StringBody {
-    /// Initialize a new StringBody with the given string.
-    pub fn new(body: &str) -> StringBody {
-        StringBody {
-            string: body.to_owned()
-        }
+    fn set_headers(&self, _: &Headers) {
+        ()
     }
 }
 
-impl RequestBody for StringBody {
-    fn for_request(&self) -> String {
-        self.string.clone()
+impl <'a>RequestBody for &'a str {
+    fn for_request(self) -> String {
+        self.to_string()
     }
 
     fn set_headers(&self, _: &Headers) {
@@ -216,7 +212,7 @@ mod test {
         headers.set(headers::ContentType(mime));
         let response = post("http://localhost:3000/users",
                             headers,
-                            StringBody::new("first_name=Example&last_name=User"),
+                            "first_name=Example&last_name=User",
                             &PostHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
@@ -233,7 +229,7 @@ mod test {
         headers.set(headers::ContentType(mime));
         let response = patch("http://localhost:3000/users/1",
                              headers,
-                             StringBody::new("first_name=Example&last_name=User"),
+                             "first_name=Example&last_name=User",
                              &router);
         let result = extract_body_to_bytes(response.unwrap());
 
@@ -250,7 +246,7 @@ mod test {
         headers.set(headers::ContentType(mime));
         let response = put("http://localhost:3000/users/2",
                            headers,
-                           StringBody::new("first_name=Example&last_name=User"),
+                           "first_name=Example&last_name=User",
                            &router);
         let result = extract_body_to_bytes(response.unwrap());
 
