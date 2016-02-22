@@ -11,48 +11,53 @@ use std::io::Cursor;
 
 use super::mock_stream::MockStream;
 
+mod multipart;
+pub use self::multipart::MultipartBody;
+
 /// Convenience method for making GET requests to Iron Handlers.
 pub fn get<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
-    request(method::Get, path, "", headers, handler)
+    request(method::Get, path, StringBody::new(""), headers, handler)
 }
 
 /// Convenience method for making POST requests with a body to Iron Handlers.
-pub fn post<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+pub fn post<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response> {
     request(method::Post, path, body, headers, handler)
 }
 
 /// Convenience method for making PATCH requests with a body to Iron Handlers.
-pub fn patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+pub fn patch<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response> {
     request(method::Patch, path, body, headers, handler)
 }
 
 /// Convenience method for making PUT requests with a body to Iron Handlers.
-pub fn put<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+pub fn put<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response> {
     request(method::Put, path, body, headers, handler)
 }
 
 /// Convenience method for making DELETE requests to Iron Handlers.
 pub fn delete<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
-    request(method::Delete, path, "", headers, handler)
+    request(method::Delete, path, StringBody::new(""), headers, handler)
 }
 
 /// Convenience method for making OPTIONS requests to Iron Handlers.
 pub fn options<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
-    request(method::Options, path, "", headers, handler)
+    request(method::Options, path, StringBody::new(""), headers, handler)
 }
 
 /// Convenience method for making HEAD requests to Iron Handlers.
 pub fn head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response> {
-    request(method::Head, path, "", headers, handler)
+    request(method::Head, path, StringBody::new(""), headers, handler)
 }
 
 /// Constructs an Iron::Request from the given parts and passes it to the
 /// `handle` method on the given Handler.
-pub fn request<H: Handler>(method: method::Method,
-                            path: &str,
-                            body: &str,
-                            mut headers: Headers,
-                            handler: &H) -> IronResult<Response> {
+pub fn request<H: Handler, B: RequestBody>(method: method::Method,
+                                           path: &str,
+                                           mut body: B,
+                                           mut headers: Headers,
+                                           handler: &H) -> IronResult<Response> {
+    body.set_headers(&mut headers);
+    let body = body.for_request();
     let content_length = body.len() as u64;
     let data = Cursor::new(body.as_bytes().to_vec());
     let mut stream = MockStream::new(data);
@@ -80,21 +85,66 @@ pub fn request<H: Handler>(method: method::Method,
     handler.handle(&mut req)
 }
 
+/// A trait describing the interface a request body must implement.
+pub trait RequestBody {
+    /// The final body to write to the request, in the form of a string.
+    fn for_request(&mut self) -> String;
+
+    /// Set any appropriate headers for the request e.g. Content-Type
+    fn set_headers(&self, headers: &mut Headers);
+}
+
+/// A simple string request body.
+pub struct StringBody {
+    string: String,
+}
+
+impl StringBody {
+    /// Initialize a new StringBody with the given string.
+    pub fn new(body: &str) -> StringBody {
+        StringBody {
+            string: body.to_owned()
+        }
+    }
+}
+
+impl RequestBody for StringBody {
+    fn for_request(&mut self) -> String {
+        self.string.clone()
+    }
+
+    fn set_headers(&self, _: &mut Headers) {
+        ()
+    }
+}
+
 #[cfg(test)]
 mod test {
+    extern crate params;
     extern crate router;
-    extern crate urlencoded;
 
     use iron::headers::Headers;
-    use iron::mime::Mime;
     use iron::prelude::*;
     use iron::{Handler, headers, status};
 
     use response::extract_body_to_bytes;
+    use response::extract_body_to_string;
 
-    use self::urlencoded::UrlEncodedBody;
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::PathBuf;
 
     use super::*;
+
+    fn get_params_value<'a>(params: &params::Map, key: &'a str) -> String {
+        let value = params.get(key);
+
+        // destructure the Value enum to get the param value out
+        match value {
+            Some(&params::Value::String(ref string)) => string.clone(),
+            _ => String::new(),
+        }
+    }
 
     struct HelloWorldHandler;
 
@@ -121,10 +171,10 @@ mod test {
 
     impl Handler for PostHandler {
         fn handle(&self, req: &mut Request) -> IronResult<Response> {
-            let body = req.get_ref::<UrlEncodedBody>()
-                .expect("Expected to extract a UrlEncodedBody from the request");
-            let first_name = body.get("first_name").unwrap()[0].to_owned();
-            let last_name = body.get("last_name").unwrap()[0].to_owned();
+            let params = req.get_ref::<params::Params>()
+                .expect("Expected to extract Params from the request");
+            let first_name = get_params_value(params, "first_name");
+            let last_name = get_params_value(params, "last_name");
 
             Ok(Response::with((status::Ok, first_name + " " + &last_name)))
         }
@@ -141,10 +191,10 @@ mod test {
                 params.find("id").unwrap().parse::<String>().unwrap()
             };
 
-            let body = req.get_ref::<UrlEncodedBody>()
-                .expect("Expected to extract a UrlEncodedBody from the request");
-            let first_name = body.get("first_name").unwrap()[0].to_owned();
-            let last_name = body.get("last_name").unwrap()[0].to_owned();
+            let params = req.get_ref::<params::Params>()
+                .expect("Expected to extract Params from the request");
+            let first_name = get_params_value(params, "first_name");
+            let last_name = get_params_value(params, "last_name");
 
             Ok(Response::with((status::Ok, [first_name, last_name, id].join(" "))))
         }
@@ -166,6 +216,50 @@ mod test {
         }
     }
 
+    struct MultipartFormHandler;
+
+    impl Handler for MultipartFormHandler {
+        fn handle(&self, req: &mut Request) -> IronResult<Response> {
+            let params = req.get_ref::<params::Params>().expect("Params");
+            let value = params.get("key");
+
+            match value {
+                Some(&params::Value::String(ref string)) => {
+                    Ok(Response::with((status::Ok, string.to_owned())))
+                },
+                Some(&params::Value::File(ref file)) => {
+                    Ok(Response::with((status::Ok, file.filename().unwrap())))
+                },
+                _ => Ok(Response::with(status::Ok)),
+            }
+        }
+    }
+
+    #[test]
+    fn test_post_multipart_text() {
+        let mut body = super::MultipartBody::new();
+        body.write("key".to_owned(), "my_song".to_owned());
+        let response = post("http://localhost:3000", Headers::new(), body, &MultipartFormHandler);
+        let result = extract_body_to_string(response.unwrap());
+
+        assert_eq!(result, "my_song");
+    }
+
+    #[test]
+    fn test_post_multipart_file() {
+        let mut body = super::MultipartBody::new();
+
+        let path = PathBuf::from("/tmp/file.txt");
+        let mut file = File::create(path.clone()).unwrap();
+        file.write_all(b"Hello, world!").ok();
+
+        body.upload("key".to_owned(), path);
+        let response = post("http://localhost:3000", Headers::new(), body, &MultipartFormHandler);
+        let result = extract_body_to_string(response.unwrap());
+
+        assert_eq!(result, "file.txt");
+    }
+
     #[test]
     fn test_get() {
         let response = get("http://localhost:3000", Headers::new(), &HelloWorldHandler);
@@ -177,11 +271,10 @@ mod test {
     #[test]
     fn test_post() {
         let mut headers = Headers::new();
-        let mime: Mime = "application/x-www-form-urlencoded".parse().unwrap();
-        headers.set(headers::ContentType(mime));
+        headers.set(headers::ContentType::form_url_encoded());
         let response = post("http://localhost:3000/users",
                             headers,
-                            "first_name=Example&last_name=User",
+                            StringBody::new("first_name=Example&last_name=User"),
                             &PostHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
@@ -194,11 +287,10 @@ mod test {
         router.patch("/users/:id", UpdateHandler);
 
         let mut headers = Headers::new();
-        let mime: Mime = "application/x-www-form-urlencoded".parse().unwrap();
-        headers.set(headers::ContentType(mime));
+        headers.set(headers::ContentType::form_url_encoded());
         let response = patch("http://localhost:3000/users/1",
                              headers,
-                             "first_name=Example&last_name=User",
+                             StringBody::new("first_name=Example&last_name=User"),
                              &router);
         let result = extract_body_to_bytes(response.unwrap());
 
@@ -211,11 +303,10 @@ mod test {
         router.put("/users/:id", UpdateHandler);
 
         let mut headers = Headers::new();
-        let mime: Mime = "application/x-www-form-urlencoded".parse().unwrap();
-        headers.set(headers::ContentType(mime));
+        headers.set(headers::ContentType::form_url_encoded());
         let response = put("http://localhost:3000/users/2",
                            headers,
-                           "first_name=Example&last_name=User",
+                           StringBody::new("first_name=Example&last_name=User"),
                            &router);
         let result = extract_body_to_bytes(response.unwrap());
 
