@@ -8,7 +8,7 @@ repository = "https://github.com/reem/iron-test"
 license = "MIT"
 
 [features]
-default = []
+default = ["ssl"]
 ssl = ["hyper/ssl"]
 
 [dependencies]
