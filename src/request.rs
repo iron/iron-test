@@ -64,7 +64,9 @@ pub fn request<H: Handler>(method: method::Method,
     let url = Url::parse(path).unwrap();
     let addr = stream.peer_addr().unwrap();
 
-    headers.set(headers::UserAgent("iron-test".to_string()));
+    if !headers.has::<headers::UserAgent>() {
+        headers.set(headers::UserAgent("iron-test".to_string()));
+    }
     headers.set(headers::ContentLength(content_length));
 
     let mut req = Request {
@@ -90,7 +92,7 @@ mod test {
     use iron::prelude::*;
     use iron::{Handler, headers, status};
 
-    use response::extract_body_to_bytes;
+    use response::{extract_body_to_bytes, extract_body_to_string};
 
     use self::urlencoded::UrlEncodedBody;
 
@@ -163,6 +165,15 @@ mod test {
     impl Handler for HeadHandler {
         fn handle(&self, _: &mut Request) -> IronResult<Response> {
             Ok(Response::with(status::Ok))
+        }
+    }
+
+    struct UserAgentHandler;
+
+    impl Handler for UserAgentHandler {
+        fn handle(&self, req: &mut Request) -> IronResult<Response> {
+            let user_agent = req.headers.get::<headers::UserAgent>().unwrap();
+            Ok(Response::with((status::Ok, user_agent.to_string())))
         }
     }
 
@@ -248,5 +259,24 @@ mod test {
         let result = extract_body_to_bytes(response.unwrap());
 
         assert_eq!(result, []);
+    }
+
+    #[test]
+    fn test_user_agent_not_provided() {
+        let headers = Headers::new();
+        let response = get("http://localhost:3000/", headers, &UserAgentHandler);
+        let result = extract_body_to_string(response.unwrap());
+
+        assert_eq!(result, "iron-test");
+    }
+
+    #[test]
+    fn test_user_agent_provided() {
+        let mut headers = Headers::new();
+        headers.set(headers::UserAgent("CustomAgent/1.0".to_owned()));
+        let response = get("http://localhost:3000/", headers, &UserAgentHandler);
+        let result = extract_body_to_string(response.unwrap());
+
+        assert_eq!(result, "CustomAgent/1.0");
     }
 }
