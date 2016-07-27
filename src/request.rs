@@ -17,17 +17,17 @@ pub fn get<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<
 }
 
 /// Convenience method for making POST requests with a body to Iron Handlers.
-pub fn post<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+pub fn post<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response> {
     request(method::Post, path, body, headers, handler)
 }
 
 /// Convenience method for making PATCH requests with a body to Iron Handlers.
-pub fn patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+pub fn patch<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response> {
     request(method::Patch, path, body, headers, handler)
 }
 
 /// Convenience method for making PUT requests with a body to Iron Handlers.
-pub fn put<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response> {
+pub fn put<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response> {
     request(method::Put, path, body, headers, handler)
 }
 
@@ -48,11 +48,13 @@ pub fn head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult
 
 /// Constructs an Iron::Request from the given parts and passes it to the
 /// `handle` method on the given Handler.
-pub fn request<H: Handler>(method: method::Method,
+pub fn request<H: Handler, B: RequestBody>(method: method::Method,
                             path: &str,
-                            body: &str,
+                            body: B,
                             mut headers: Headers,
                             handler: &H) -> IronResult<Response> {
+    body.set_headers(&headers);
+    let body = body.for_request();
     let content_length = body.len() as u64;
     let data = Cursor::new(body.as_bytes().to_vec());
     let mut stream = MockStream::new(data);
@@ -80,6 +82,35 @@ pub fn request<H: Handler>(method: method::Method,
     };
 
     handler.handle(&mut req)
+}
+
+/// A trait describing the interface a request body must implement.
+pub trait RequestBody {
+    /// The final body to write to the request, in the form of a string.
+    fn for_request(self) -> String;
+
+    /// Set any appropriate headers for the request e.g. Content-Type
+    fn set_headers(&self, headers: &Headers);
+}
+
+impl RequestBody for String {
+    fn for_request(self) -> String {
+        self
+    }
+
+    fn set_headers(&self, _: &Headers) {
+        ()
+    }
+}
+
+impl <'a>RequestBody for &'a str {
+    fn for_request(self) -> String {
+        self.to_string()
+    }
+
+    fn set_headers(&self, _: &Headers) {
+        ()
+    }
 }
 
 #[cfg(test)]

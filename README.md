@@ -50,15 +50,19 @@ request::options<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronR
 request::delete<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response>
 request::head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult<Response>
 
-// Accepts a `&str` body
-request::post<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
-request::patch<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
-request::put<H: Handler>(path: &str, headers: Headers, body: &str, handler: &H) -> IronResult<Response>
+// Accepts anything that implements the RequestBody trait
+request::post<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response>
+request::patch<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response>
+request::put<H: Handler, B: RequestBody>(path: &str, headers: Headers, body: B, handler: &H) -> IronResult<Response>
 ```
 
-The requests that it makes sense for accept a `&str` body, while the other
-requests generate an empty body for you. The request is passed directly to 
-the `handle` call on the Handler, and the raw result is returned to you.
+Requests that accept a body can use anything that implements RequestBody. Right
+now both `String` and `&'a str` implement RequestBody, so you can use simple
+string bodies. In the future, this trait will be used to implement multipart
+and json requests.
+
+The request is passed directly to the `handle` call on the Handler, and the raw
+result is returned to you.
 
 For examples of testing different handlers, head over to the [examples
 directory](https://github.com/reem/iron-test/tree/master/examples).
