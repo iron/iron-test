@@ -31,7 +31,7 @@ fn test_hello_world() {
     let response = request::get("http://localhost:3000/hello",
                                 Headers::new(),
                                 &HelloWorldHandler).unwrap();
-    let result_body = response::extract_body_to_bytes(response.unwrap());
+    let result_body = response::extract_body_to_bytes(response);
 
     assert_eq!(result_body, b"Hello, world!");
 }
