@@ -7,12 +7,19 @@ description = "Mocking suite for Iron requests."
 repository = "https://github.com/reem/iron-test"
 license = "MIT"
 
+[features]
+default = ["ssl"]
+ssl = ["hyper/ssl"]
+
 [dependencies]
-hyper = "0.9"
 iron = "0.4"
 log = "0.3"
 url = "1.1"
 uuid = { version = "0.2", features = ["v4"] }
+
+[dependencies.hyper]
+version = "0.9"
+default-features = false
 
 [dev-dependencies]
 mime = "0.2"
