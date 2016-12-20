@@ -2,11 +2,10 @@ Iron Test
 =========
 [![Build Status](https://secure.travis-ci.org/reem/iron-test.svg?branch=master)](https://travis-ci.org/reem/iron-test)
 [![Crates.io Status](http://meritbadge.herokuapp.com/iron-test)](https://crates.io/crates/iron-test)
+[![Documentation](https://docs.rs/iron-test/badge.svg)](https://docs.rs/iron-test)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/reem/iron-test/master/LICENSE)
 
 > A suite of convenience methods and constructors for making requests to Iron Handlers.
-
-## [Documentation](https://crates.fyi/crates/iron-test/0.2.0)
 
 ## Example
 
