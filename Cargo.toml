@@ -5,6 +5,7 @@ version = "0.4.0"
 authors = ["Jonathan Reem <jonathan.reem@gmail.com>"]
 description = "Mocking suite for Iron requests."
 repository = "https://github.com/reem/iron-test"
+documentation = "https://docs.rs/iron-test"
 license = "MIT"
 
 [dependencies]
