@@ -1,5 +1,4 @@
 use iron::prelude::*;
-use iron::response::{ResponseBody};
 
 /// Extracts a utf8 response body to a String.
 pub fn extract_body_to_string(response: Response) -> String {
@@ -11,13 +10,10 @@ pub fn extract_body_to_string(response: Response) -> String {
 pub fn extract_body_to_bytes(response: Response) -> Vec<u8> {
     let mut result = Vec::new();
 
-    {
-        let mut response_body = ResponseBody::new(&mut result);
-        match response.body {
-            Some(mut body) => body.write_body(&mut response_body).ok(),
-            None => None,
-        };
-    }
+    match response.body {
+        Some(mut body) => body.write_body(&mut result).ok(),
+        None => None,
+    };
 
     result
 }
