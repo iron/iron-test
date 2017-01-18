@@ -10,10 +10,9 @@ pub fn extract_body_to_string(response: Response) -> String {
 pub fn extract_body_to_bytes(response: Response) -> Vec<u8> {
     let mut result = Vec::new();
 
-    match response.body {
-        Some(mut body) => body.write_body(&mut result).ok(),
-        None => None,
-    };
+    if let Some(mut body) = response.body {
+        body.write_body(&mut result).ok();
+    }
 
     result
 }
