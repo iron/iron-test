@@ -7,6 +7,8 @@ Iron Test
 
 > A suite of convenience methods and constructors for making requests to Iron Handlers.
 
+## [Documentation](https://docs.rs/iron-test)
+
 ## Example
 
 ```rust

@@ -22,7 +22,7 @@ impl Handler for RouterHandler {
 
 fn app_router() -> Router {
     let mut router = Router::new();
-    router.get("/:id", RouterHandler);
+    router.get("/:id", RouterHandler, "router");
     router
 }
 

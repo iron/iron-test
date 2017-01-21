@@ -1,11 +1,11 @@
 /// Contains convenience methods for making requests to Iron Handlers.
+use hyper;
 use hyper::buffer::BufReader;
-use hyper::http::h1::HttpReader;
 use hyper::net::NetworkStream;
 
+use iron;
 use iron::prelude::*;
-use iron::request::Body;
-use iron::{Handler, headers, Headers, method, TypeMap, Url};
+use iron::{Handler, headers, Headers, method, Url};
 
 use std::io::Cursor;
 
@@ -49,35 +49,37 @@ pub fn head<H: Handler>(path: &str, headers: Headers, handler: &H) -> IronResult
 /// Constructs an Iron::Request from the given parts and passes it to the
 /// `handle` method on the given Handler.
 pub fn request<H: Handler>(method: method::Method,
-                            path: &str,
-                            body: &str,
-                            mut headers: Headers,
-                            handler: &H) -> IronResult<Response> {
-    let content_length = body.len() as u64;
-    let data = Cursor::new(body.as_bytes().to_vec());
-    let mut stream = MockStream::new(data);
-    // Clone the stream so we can read the peer_addr off the original.
-    let mut stream_clone = stream.clone();
-    let mut reader = BufReader::new(&mut stream_clone as &mut NetworkStream);
-    let reader = HttpReader::SizedReader(&mut reader, content_length);
-
-    let url = Url::parse(path).unwrap();
-    let addr = stream.peer_addr().unwrap();
-
-    if !headers.has::<headers::UserAgent>() {
-        headers.set(headers::UserAgent("iron-test".to_string()));
+                           path: &str,
+                           body: &str,
+                           headers: Headers,
+                           handler: &H) -> IronResult<Response> {
+    // From iron 0.5.x, iron::Request contains private field. So, it is not good to
+    // create iron::Request directly. Make http request and parse it with hyper,
+    // and make iron::Request from hyper::client::Request.
+    let mut buffer = String::new();
+    buffer.push_str(&format!("{} {} HTTP/1.1\r\n", &method, path));
+    buffer.push_str(&format!("Content-Length: {}\r\n", body.len() as u64));
+    for header in headers.iter() {
+        buffer.push_str(&format!("{}: {}\r\n", header.name(), header.value_string()));
     }
-    headers.set(headers::ContentLength(content_length));
+    if !headers.has::<headers::UserAgent>() {
+        buffer.push_str(&format!("User-Agent: iron-test\r\n"));
+    }
+    buffer.push_str("\r\n");
+    buffer.push_str(body);
 
-    let mut req = Request {
-        method: method,
-        url: url,
-        body: Body::new(reader),
-        local_addr: addr.clone(),
-        remote_addr: addr,
-        headers: headers,
-        extensions: TypeMap::new()
+    let addr = "127.0.0.1:3000".parse().unwrap();
+    let url = Url::parse(path).unwrap();
+    let protocol = match url.scheme() {
+        "http" => iron::Protocol::http(),
+        "https" => iron::Protocol::https(),
+        _ => panic!("unknown protocol {}", url.scheme()),
     };
+
+    let mut stream = MockStream::new(Cursor::new(buffer.as_bytes().to_vec()));
+    let mut buf_reader = BufReader::new(&mut stream as &mut NetworkStream);
+    let http_request = hyper::server::Request::new(&mut buf_reader, addr).unwrap();
+    let mut req = Request::from_http(http_request, addr, &protocol).unwrap();
 
     handler.handle(&mut req)
 }
@@ -202,7 +204,7 @@ mod test {
     #[test]
     fn test_patch() {
         let mut router = router::Router::new();
-        router.patch("/users/:id", UpdateHandler);
+        router.patch("/users/:id", UpdateHandler, "update");
 
         let mut headers = Headers::new();
         let mime: Mime = "application/x-www-form-urlencoded".parse().unwrap();
@@ -219,7 +221,7 @@ mod test {
     #[test]
     fn test_put() {
         let mut router = router::Router::new();
-        router.put("/users/:id", UpdateHandler);
+        router.put("/users/:id", UpdateHandler, "update");
 
         let mut headers = Headers::new();
         let mime: Mime = "application/x-www-form-urlencoded".parse().unwrap();
@@ -236,7 +238,7 @@ mod test {
     #[test]
     fn test_delete() {
         let mut router = router::Router::new();
-        router.delete("/:id", RouterHandler);
+        router.delete("/:id", RouterHandler, "update");
 
         let response = delete("http://localhost:3000/1", Headers::new(), &router);
         let result = extract_body_to_bytes(response.unwrap());
