@@ -53,11 +53,12 @@ pub fn request<H: Handler>(method: method::Method,
                            body: &str,
                            headers: Headers,
                            handler: &H) -> IronResult<Response> {
+    let url = Url::parse(path).unwrap();
     // From iron 0.5.x, iron::Request contains private field. So, it is not good to
     // create iron::Request directly. Make http request and parse it with hyper,
     // and make iron::Request from hyper::client::Request.
     let mut buffer = String::new();
-    buffer.push_str(&format!("{} {} HTTP/1.1\r\n", &method, path));
+    buffer.push_str(&format!("{} {} HTTP/1.1\r\n", &method, url));
     buffer.push_str(&format!("Content-Length: {}\r\n", body.len() as u64));
     for header in headers.iter() {
         buffer.push_str(&format!("{}: {}\r\n", header.name(), header.value_string()));
@@ -69,7 +70,6 @@ pub fn request<H: Handler>(method: method::Method,
     buffer.push_str(body);
 
     let addr = "127.0.0.1:3000".parse().unwrap();
-    let url = Url::parse(path).unwrap();
     let protocol = match url.scheme() {
         "http" => iron::Protocol::http(),
         "https" => iron::Protocol::https(),
@@ -280,5 +280,13 @@ mod test {
         let result = extract_body_to_string(response.unwrap());
 
         assert_eq!(result, "CustomAgent/1.0");
+    }
+
+    #[test]
+    fn test_percent_decoded_url() {
+        let response = head("http://localhost:3000/some path with spaces", Headers::new(), &HeadHandler);
+        let result = extract_body_to_bytes(response.unwrap());
+
+        assert_eq!(result, []);
     }
 }
