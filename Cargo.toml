@@ -1,21 +1,21 @@
 [package]
 
 name = "iron-test"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Jonathan Reem <jonathan.reem@gmail.com>"]
 description = "Mocking suite for Iron requests."
-repository = "https://github.com/reem/iron-test"
+repository = "https://github.com/iron/iron-test"
 documentation = "https://docs.rs/iron-test"
 license = "MIT"
 
 [dependencies]
 hyper = "0.10"
-iron = "0.5"
+iron = ">= 0.5, <0.7"
 log = "0.3"
 url = "1.1"
 uuid = { version = "0.2", features = ["v4"] }
 
 [dev-dependencies]
 mime = "0.2"
-router = "0.5"
-urlencoded = "0.5"
+router = ">= 0.5, <0.7"
+urlencoded = ">= 0.5, <0.7"
