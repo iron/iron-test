@@ -260,7 +260,7 @@ mod test {
         let response = head("http://localhost:3000/users", Headers::new(), &HeadHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
-        assert_eq!(result, []);
+        assert_eq!(result, b"");
     }
 
     #[test]
@@ -287,6 +287,6 @@ mod test {
         let response = head("http://localhost:3000/some path with spaces", Headers::new(), &HeadHandler);
         let result = extract_body_to_bytes(response.unwrap());
 
-        assert_eq!(result, []);
+        assert_eq!(result, b"");
     }
 }
